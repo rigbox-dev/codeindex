@@ -9,3 +9,4 @@ serde_json = { workspace = true }
 anyhow = { workspace = true }
 blake3 = { workspace = true }
 tracing = { workspace = true }
+rusqlite = { version = "0.31", features = ["bundled"] }
