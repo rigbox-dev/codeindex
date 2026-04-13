@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use codeindex_core::config::Config;
-use codeindex_core::embedding::MockEmbeddingProvider;
 use codeindex_core::query::{QueryEngine, QueryOptions};
 use codeindex_core::storage::sqlite::SqliteStorage;
 use codeindex_core::storage::vectors::VectorIndex;
@@ -33,19 +32,15 @@ pub fn run(
     let storage = SqliteStorage::open(&db_path)
         .with_context(|| format!("Failed to open database at {}", db_path.display()))?;
 
-    // Use MockEmbeddingProvider with dimension 32 for now
-    const DIM: usize = 32;
-    let provider = MockEmbeddingProvider::new(DIM);
+    // Build the embedding provider using the same logic as the index command.
+    let provider = super::index::build_embedding_provider(&config);
+    let dim = provider.dimension();
 
-    // Load or create vector index
-    let mut vector_index = VectorIndex::load(&index_dir, DIM)
-        .unwrap_or_else(|_| VectorIndex::new(DIM));
+    // Load the vector index built during indexing.
+    let vector_index = VectorIndex::load(&index_dir, dim)
+        .unwrap_or_else(|_| VectorIndex::new(dim));
 
-    // If no vectors loaded, embed all regions from storage
-    // (needed when index was built without embeddings)
-    build_vector_index_if_empty(&storage, &provider, &mut vector_index)?;
-
-    let engine = QueryEngine::new(&storage, &vector_index, &provider);
+    let engine = QueryEngine::new(&storage, &vector_index, provider.as_ref(), &project_root);
 
     let opts = QueryOptions {
         top,
@@ -76,43 +71,5 @@ pub fn run(
         output::print_human(&response);
     }
 
-    Ok(())
-}
-
-/// Populate the VectorIndex from all regions in storage using the given provider.
-/// This is a no-op if the index already has points from a previous load.
-fn build_vector_index_if_empty(
-    storage: &SqliteStorage,
-    provider: &MockEmbeddingProvider,
-    vector_index: &mut VectorIndex,
-) -> Result<()> {
-    use codeindex_core::embedding::EmbeddingProvider;
-
-    // Collect file_ids
-    let file_ids: Vec<i64> = {
-        let conn = storage.conn();
-        let mut stmt = conn.prepare("SELECT file_id FROM files")?;
-        let ids: Vec<i64> = stmt
-            .query_map([], |row| row.get(0))?
-            .filter_map(|r| r.ok())
-            .collect();
-        ids
-    };
-
-    if file_ids.is_empty() {
-        return Ok(());
-    }
-
-    for file_id in file_ids {
-        let regions = storage.get_regions_for_file(file_id)?;
-        for region in regions {
-            let text = format!("{}: {}", region.kind, region.signature);
-            let vecs = provider.embed(&[text])?;
-            // Ignore dimension mismatch errors (index might be partially built)
-            let _ = vector_index.add(region.region_id, vecs.into_iter().next().unwrap_or_default());
-        }
-    }
-
-    vector_index.build()?;
     Ok(())
 }

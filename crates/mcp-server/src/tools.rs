@@ -105,7 +105,7 @@ impl McpServer {
 
         let (storage, vectors, provider) = self.open_index()?;
 
-        let engine = QueryEngine::new(&storage, &vectors, &provider);
+        let engine = QueryEngine::new(&storage, &vectors, &provider, &self.project_root);
         let opts = QueryOptions {
             top,
             depth,
@@ -133,7 +133,7 @@ impl McpServer {
 
         let (storage, vectors, provider) = self.open_index()?;
 
-        let engine = QueryEngine::new(&storage, &vectors, &provider);
+        let engine = QueryEngine::new(&storage, &vectors, &provider, &self.project_root);
         let opts = QueryOptions {
             top: 20,
             depth,

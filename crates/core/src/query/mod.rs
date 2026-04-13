@@ -3,6 +3,8 @@ pub mod fusion;
 pub mod parser;
 
 use anyhow::Result;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use crate::embedding::EmbeddingProvider;
 use crate::model::{DependencyInfo, QueryResponse, QueryResult};
@@ -38,6 +40,7 @@ pub struct QueryEngine<'a> {
     storage: &'a SqliteStorage,
     vectors: &'a VectorIndex,
     embedding_provider: &'a dyn EmbeddingProvider,
+    project_root: PathBuf,
 }
 
 impl<'a> QueryEngine<'a> {
@@ -45,11 +48,13 @@ impl<'a> QueryEngine<'a> {
         storage: &'a SqliteStorage,
         vectors: &'a VectorIndex,
         embedding_provider: &'a dyn EmbeddingProvider,
+        project_root: &Path,
     ) -> Self {
         Self {
             storage,
             vectors,
             embedding_provider,
+            project_root: project_root.to_path_buf(),
         }
     }
 
@@ -182,10 +187,12 @@ impl<'a> QueryEngine<'a> {
         &self,
         ids: &[i64],
         scores: &[f64],
-        dep_map: &std::collections::HashMap<i64, DependencyInfo>,
-        _opts: &QueryOptions,
+        dep_map: &HashMap<i64, DependencyInfo>,
+        opts: &QueryOptions,
     ) -> Result<Vec<QueryResult>> {
         let mut results = Vec::new();
+        // Cache file contents to avoid re-reading the same file multiple times.
+        let mut file_cache: HashMap<String, Vec<u8>> = HashMap::new();
 
         for (&region_id, &score) in ids.iter().zip(scores.iter()) {
             let region = match self.storage.get_region(region_id)? {
@@ -203,6 +210,33 @@ impl<'a> QueryEngine<'a> {
                 .cloned()
                 .unwrap_or_default();
 
+            // Optionally read the source code for this region.
+            let code = if opts.include_code {
+                let contents = if let Some(cached) = file_cache.get(&file.path) {
+                    cached.clone()
+                } else {
+                    let abs_path = self.project_root.join(&file.path);
+                    match std::fs::read(&abs_path) {
+                        Ok(bytes) => {
+                            file_cache.insert(file.path.clone(), bytes.clone());
+                            bytes
+                        }
+                        Err(_) => Vec::new(),
+                    }
+                };
+
+                let start = region.start_byte as usize;
+                let end = (region.end_byte as usize).min(contents.len());
+                if start < end {
+                    let slice = &contents[start..end];
+                    Some(String::from_utf8_lossy(slice).to_string())
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             results.push(QueryResult {
                 region_id,
                 file: file.path,
@@ -212,7 +246,7 @@ impl<'a> QueryEngine<'a> {
                 signature: region.signature,
                 summary: None,
                 relevance: score,
-                code: None,
+                code,
                 dependencies,
             });
         }
@@ -303,7 +337,8 @@ mod tests {
     #[test]
     fn symbol_lookup_finds_struct() {
         let (storage, vectors, provider) = setup();
-        let engine = QueryEngine::new(&storage, &vectors, &provider);
+        let root = fixture_root();
+        let engine = QueryEngine::new(&storage, &vectors, &provider, &root);
 
         let opts = QueryOptions {
             top: 10,
@@ -326,7 +361,8 @@ mod tests {
     #[test]
     fn file_scope_returns_all_regions() {
         let (storage, vectors, provider) = setup();
-        let engine = QueryEngine::new(&storage, &vectors, &provider);
+        let root = fixture_root();
+        let engine = QueryEngine::new(&storage, &vectors, &provider, &root);
 
         let opts = QueryOptions {
             top: 50,
@@ -341,5 +377,31 @@ mod tests {
             "expected at least 4 regions for src/auth/types.rs, got {}",
             response.results.len()
         );
+    }
+
+    #[test]
+    fn include_code_returns_source_snippet() {
+        let (storage, vectors, provider) = setup();
+        let root = fixture_root();
+        let engine = QueryEngine::new(&storage, &vectors, &provider, &root);
+
+        let opts = QueryOptions {
+            top: 5,
+            depth: 0,
+            include_code: true,
+        };
+
+        let response = engine.query(":symbol AuthRequest", &opts).unwrap();
+        assert!(
+            !response.results.is_empty(),
+            "should have results to check code field"
+        );
+        let result = &response.results[0];
+        assert!(
+            result.code.is_some(),
+            "code field should be Some when include_code is true"
+        );
+        let code = result.code.as_ref().unwrap();
+        assert!(!code.is_empty(), "code snippet should not be empty");
     }
 }

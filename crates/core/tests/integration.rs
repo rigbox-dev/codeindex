@@ -84,7 +84,7 @@ fn end_to_end_rust_project() {
     let provider = MockEmbeddingProvider::new(DIM);
     let vector_index = build_vector_index(&storage, DIM);
 
-    let engine = QueryEngine::new(&storage, &vector_index, &provider);
+    let engine = QueryEngine::new(&storage, &vector_index, &provider, &root);
     let opts = QueryOptions {
         top: 10,
         depth: 1,
