@@ -327,6 +327,40 @@ impl SqliteStorage {
         }
         Ok(ids)
     }
+
+    // -------------------------------------------------------------------------
+    // GC / maintenance helpers
+    // -------------------------------------------------------------------------
+
+    /// Return all indexed files, ordered by path.
+    pub fn list_all_files(&self) -> Result<Vec<IndexedFile>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT file_id, path, content_hash, language, last_indexed_at FROM files ORDER BY path"
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(IndexedFile {
+                file_id: row.get(0)?,
+                path: row.get(1)?,
+                content_hash: row.get(2)?,
+                language: row.get(3)?,
+                last_indexed_at: row.get(4)?,
+            })
+        })?;
+        Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
+    }
+
+    /// Delete a file and all its associated regions from the index.
+    pub fn delete_file(&self, file_id: i64) -> Result<()> {
+        self.conn.execute("DELETE FROM regions WHERE file_id = ?1", [file_id])?;
+        self.conn.execute("DELETE FROM files WHERE file_id = ?1", [file_id])?;
+        Ok(())
+    }
+
+    /// Compact the database by running VACUUM.
+    pub fn vacuum(&self) -> Result<()> {
+        self.conn.execute_batch("VACUUM")?;
+        Ok(())
+    }
 }
 
 // -------------------------------------------------------------------------

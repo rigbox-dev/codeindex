@@ -3,17 +3,14 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use tracing::{error, info, warn};
 
-mod debounce;
-mod watcher;
-
 use codeindex_core::{
     config::Config,
     indexer::pipeline::IndexPipeline,
     storage::sqlite::SqliteStorage,
 };
+use codeindex_daemon::debounce::Debouncer;
+use codeindex_daemon::watcher::start_watcher;
 use codeindex_tree_sitter_langs::LanguageRegistry;
-use debounce::Debouncer;
-use watcher::start_watcher;
 
 fn main() -> Result<()> {
     tracing_subscriber::fmt::init();

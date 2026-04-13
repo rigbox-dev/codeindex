@@ -59,17 +59,33 @@ enum Commands {
         format: String,
     },
 
-    /// Start the MCP server (stub)
+    /// Start the MCP server
     McpServer,
 
-    /// Manage configuration (stub)
-    Config,
+    /// Manage configuration
+    Config {
+        #[command(subcommand)]
+        action: Option<ConfigAction>,
+    },
 
-    /// Garbage collect the index (stub)
+    /// Garbage collect the index
     Gc,
 
-    /// Show index statistics (stub)
+    /// Show index statistics
     Stats,
+
+    /// Watch for file changes and re-index
+    Watch {
+        /// Stop running daemon
+        #[arg(long)]
+        stop: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum ConfigAction {
+    /// Set a config value (e.g. `codeindex config set embedding.provider voyage`)
+    Set { key: String, value: String },
 }
 
 fn main() {
@@ -89,21 +105,18 @@ fn main() {
             format,
         } => commands::query::run(query, top, depth, !no_code, json, format),
         Commands::McpServer => {
-            println!("MCP server not yet implemented.");
+            eprintln!("Use the standalone mcp-server binary: codeindex-mcp-server");
             Ok(())
         }
-        Commands::Config => {
-            println!("Config management not yet implemented.");
-            Ok(())
-        }
-        Commands::Gc => {
-            println!("Garbage collection not yet implemented.");
-            Ok(())
-        }
-        Commands::Stats => {
-            println!("Stats not yet implemented.");
-            Ok(())
-        }
+        Commands::Config { action } => match action {
+            Some(ConfigAction::Set { key, value }) => {
+                commands::config_cmd::run_set(&key, &value)
+            }
+            None => commands::config_cmd::run_show(),
+        },
+        Commands::Gc => commands::gc::run(),
+        Commands::Stats => commands::stats::run(),
+        Commands::Watch { stop } => commands::watch::run(stop),
     };
 
     match result {

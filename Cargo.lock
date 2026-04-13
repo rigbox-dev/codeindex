@@ -250,8 +250,10 @@ dependencies = [
  "atty",
  "clap",
  "codeindex-core",
+ "codeindex-daemon",
  "codeindex-tree-sitter-langs",
  "colored",
+ "libc",
  "serde_json",
 ]
 
