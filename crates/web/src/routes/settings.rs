@@ -31,103 +31,95 @@ pub async fn page(State(state): State<SharedState>) -> Html<String> {
         <div class="page-header">
             <h2>Settings</h2>
         </div>
-        <div id="save-status" style="margin-bottom:12px;min-height:24px;"></div>
+        <div id="save-status" class="mb-2"></div>
         <form id="settings-form"
               hx-put="/api/config"
               hx-target="#save-status"
               hx-swap="innerHTML">
 
             <!-- Embedding Section -->
-            <div class="card" style="margin-bottom:20px;">
+            <div class="card mb-2">
                 <div class="card-header">
                     <h3 class="card-title">Embedding</h3>
                 </div>
-                <div style="padding:16px;display:grid;gap:12px;">
-                    <div>
-                        <label style="display:block;margin-bottom:4px;color:#8b949e;font-size:0.87em;">Provider</label>
-                        <select name="embedding.provider" style="width:100%;padding:8px 10px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:0.95em;">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Provider</label>
+                        <select name="embedding.provider">
                             <option value="local" {provider_local_selected}>local (ONNX)</option>
                             <option value="voyage" {provider_voyage_selected}>voyage</option>
                         </select>
                     </div>
-                    <div>
-                        <label style="display:block;margin-bottom:4px;color:#8b949e;font-size:0.87em;">Model (optional)</label>
+                    <div class="form-group">
+                        <label>Model (optional)</label>
                         <input type="text" name="embedding.model" value="{embedding_model}"
-                               placeholder="leave blank for default"
-                               style="width:100%;box-sizing:border-box;padding:8px 10px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:0.95em;" />
+                               placeholder="leave blank for default" />
                     </div>
                 </div>
             </div>
 
             <!-- Summary Section -->
-            <div class="card" style="margin-bottom:20px;">
+            <div class="card mb-2">
                 <div class="card-header">
                     <h3 class="card-title">Summary</h3>
                 </div>
-                <div style="padding:16px;display:grid;gap:12px;">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <input type="checkbox" name="summary.enabled" id="summary-enabled" value="true" {summary_enabled}
-                               style="width:16px;height:16px;cursor:pointer;" />
-                        <label for="summary-enabled" style="color:#c9d1d9;font-size:0.95em;cursor:pointer;">Enable summaries</label>
+                <div class="form-grid">
+                    <div class="flex items-center gap-1">
+                        <input type="checkbox" name="summary.enabled" id="summary-enabled" value="true" {summary_enabled} />
+                        <label for="summary-enabled">Enable summaries</label>
                     </div>
-                    <div>
-                        <label style="display:block;margin-bottom:4px;color:#8b949e;font-size:0.87em;">Model</label>
-                        <input type="text" name="summary.model" value="{summary_model}"
-                               style="width:100%;box-sizing:border-box;padding:8px 10px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:0.95em;" />
+                    <div class="form-group">
+                        <label>Model</label>
+                        <input type="text" name="summary.model" value="{summary_model}" />
                     </div>
                 </div>
             </div>
 
             <!-- Query Section -->
-            <div class="card" style="margin-bottom:20px;">
+            <div class="card mb-2">
                 <div class="card-header">
                     <h3 class="card-title">Query</h3>
                 </div>
-                <div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div>
-                        <label style="display:block;margin-bottom:4px;color:#8b949e;font-size:0.87em;">Default top results</label>
-                        <input type="number" name="query.default_top" value="{query_default_top}" min="1" max="100"
-                               style="width:100%;box-sizing:border-box;padding:8px 10px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:0.95em;" />
+                <div class="form-grid-2col">
+                    <div class="form-group">
+                        <label>Default top results</label>
+                        <input type="number" name="query.default_top" value="{query_default_top}" min="1" max="100" />
                     </div>
-                    <div>
-                        <label style="display:block;margin-bottom:4px;color:#8b949e;font-size:0.87em;">Default graph depth</label>
-                        <input type="number" name="query.default_depth" value="{query_default_depth}" min="0" max="5"
-                               style="width:100%;box-sizing:border-box;padding:8px 10px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:0.95em;" />
+                    <div class="form-group">
+                        <label>Default graph depth</label>
+                        <input type="number" name="query.default_depth" value="{query_default_depth}" min="0" max="5" />
                     </div>
                 </div>
             </div>
 
             <!-- Daemon Section -->
-            <div class="card" style="margin-bottom:20px;">
+            <div class="card mb-2">
                 <div class="card-header">
                     <h3 class="card-title">Daemon</h3>
                 </div>
-                <div style="padding:16px;display:grid;gap:12px;">
-                    <div>
-                        <label style="display:block;margin-bottom:4px;color:#8b949e;font-size:0.87em;">Debounce (ms)</label>
-                        <input type="number" name="daemon.debounce_ms" value="{daemon_debounce_ms}" min="0"
-                               style="width:100%;box-sizing:border-box;padding:8px 10px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:0.95em;" />
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Debounce (ms)</label>
+                        <input type="number" name="daemon.debounce_ms" value="{daemon_debounce_ms}" min="0" />
                     </div>
                 </div>
             </div>
 
             <!-- Index Section -->
-            <div class="card" style="margin-bottom:20px;">
+            <div class="card mb-2">
                 <div class="card-header">
                     <h3 class="card-title">Index</h3>
                 </div>
-                <div style="padding:16px;display:grid;gap:12px;">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <input type="checkbox" name="index.git_hooks" id="git-hooks" value="true" {git_hooks}
-                               style="width:16px;height:16px;cursor:pointer;" />
-                        <label for="git-hooks" style="color:#c9d1d9;font-size:0.95em;cursor:pointer;">Install git hooks (auto-index on commit)</label>
+                <div class="form-grid">
+                    <div class="flex items-center gap-1">
+                        <input type="checkbox" name="index.git_hooks" id="git-hooks" value="true" {git_hooks} />
+                        <label for="git-hooks">Install git hooks (auto-index on commit)</label>
                     </div>
                 </div>
             </div>
 
-            <div style="display:flex;gap:12px;align-items:center;">
-                <button type="submit"
-                        style="padding:8px 20px;background:#1f6feb;border:none;border-radius:6px;color:#fff;font-size:0.95em;cursor:pointer;font-weight:500;">
+            <div class="flex items-center gap-1">
+                <button type="submit" class="primary">
                     Save Settings
                 </button>
             </div>

@@ -534,12 +534,12 @@ pub async fn update_config(
     match config.save(&state.project_root) {
         Ok(()) => (
             StatusCode::OK,
-            r#"<span style="color:#3fb950;">&#10003; Settings saved</span>"#,
+            r#"<span class="text-success">&#10003; Settings saved</span>"#,
         )
             .into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!(r#"<span style="color:#f85149;">&#10007; Save failed: {}</span>"#, e),
+            format!(r#"<span class="text-danger">&#10007; Save failed: {}</span>"#, e),
         )
             .into_response(),
     }
