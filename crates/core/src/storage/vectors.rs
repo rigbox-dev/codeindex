@@ -68,7 +68,7 @@ impl VectorIndex {
         }
 
         let (pts, values): (Vec<Point>, Vec<i64>) =
-            self.points.iter().cloned().map(|(p, v)| (p, v)).unzip();
+            self.points.iter().cloned().unzip();
 
         let map = Builder::default().build(pts, values);
         self.map = Some(map);

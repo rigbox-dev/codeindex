@@ -169,12 +169,9 @@ fn collect_dependencies(
     regions: &[ExtractedRegion],
     deps: &mut Vec<ExtractedDependency>,
 ) {
-    match node.kind() {
-        "import_declaration" => {
-            extract_import_declaration(node, source, regions, deps);
-            return;
-        }
-        _ => {}
+    if node.kind() == "import_declaration" {
+        extract_import_declaration(node, source, regions, deps);
+        return;
     }
 
     let mut cursor = node.walk();
@@ -241,7 +238,7 @@ fn push_import_spec(
     } else {
         full_path
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or(&full_path)
             .to_string()
     };

@@ -178,7 +178,7 @@ fn impl_name(node: Node, source: &[u8]) -> String {
 }
 
 /// Get the text of a named field child (tree-sitter field accessor).
-fn child_text_by_field<'a>(node: Node, field: &str, source: &'a [u8]) -> String {
+fn child_text_by_field(node: Node, field: &str, source: &[u8]) -> String {
     node.child_by_field_name(field)
         .map(|n| node_text(n, source).to_string())
         .unwrap_or_default()

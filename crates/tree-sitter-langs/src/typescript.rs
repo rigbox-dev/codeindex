@@ -243,51 +243,48 @@ fn extract_import_dependency(
     let mut found_any = false;
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
-        match child.kind() {
-            "import_clause" => {
-                // May have named_imports or a default identifier
-                let mut c2 = child.walk();
-                for sub in child.children(&mut c2) {
-                    match sub.kind() {
-                        "identifier" => {
-                            // default import: import Foo from '...'
-                            let name = node_text(sub, source).to_string();
-                            if !name.is_empty() {
-                                deps.push(ExtractedDependency {
-                                    source_region_index,
-                                    target_symbol: name,
-                                    target_path: target_path.clone(),
-                                    kind: DependencyKind::Imports,
-                                });
-                                found_any = true;
-                            }
+        if child.kind() == "import_clause" {
+            // May have named_imports or a default identifier
+            let mut c2 = child.walk();
+            for sub in child.children(&mut c2) {
+                match sub.kind() {
+                    "identifier" => {
+                        // default import: import Foo from '...'
+                        let name = node_text(sub, source).to_string();
+                        if !name.is_empty() {
+                            deps.push(ExtractedDependency {
+                                source_region_index,
+                                target_symbol: name,
+                                target_path: target_path.clone(),
+                                kind: DependencyKind::Imports,
+                            });
+                            found_any = true;
                         }
-                        "named_imports" => {
-                            let mut c3 = sub.walk();
-                            for spec in sub.children(&mut c3) {
-                                if spec.kind() == "import_specifier" {
-                                    // The first identifier child is the imported name
-                                    let name = spec
-                                        .child_by_field_name("name")
-                                        .map(|n| node_text(n, source).to_string())
-                                        .unwrap_or_default();
-                                    if !name.is_empty() {
-                                        deps.push(ExtractedDependency {
-                                            source_region_index,
-                                            target_symbol: name,
-                                            target_path: target_path.clone(),
-                                            kind: DependencyKind::Imports,
-                                        });
-                                        found_any = true;
-                                    }
+                    }
+                    "named_imports" => {
+                        let mut c3 = sub.walk();
+                        for spec in sub.children(&mut c3) {
+                            if spec.kind() == "import_specifier" {
+                                // The first identifier child is the imported name
+                                let name = spec
+                                    .child_by_field_name("name")
+                                    .map(|n| node_text(n, source).to_string())
+                                    .unwrap_or_default();
+                                if !name.is_empty() {
+                                    deps.push(ExtractedDependency {
+                                        source_region_index,
+                                        target_symbol: name,
+                                        target_path: target_path.clone(),
+                                        kind: DependencyKind::Imports,
+                                    });
+                                    found_any = true;
                                 }
                             }
                         }
-                        _ => {}
                     }
+                    _ => {}
                 }
             }
-            _ => {}
         }
     }
 
