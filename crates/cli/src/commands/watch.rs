@@ -42,22 +42,17 @@ pub fn run(stop: bool) -> Result<()> {
         codeindex_daemon::watcher::start_watcher(&project_root, tx, extensions)?;
     let debouncer = codeindex_daemon::debounce::Debouncer::new(rx, config.daemon.debounce_ms);
 
-    loop {
-        match debouncer.next_batch() {
-            Some(changed) => {
-                println!("Re-indexing {} file(s)...", changed.len());
-                let db_path = index_dir.join("index.db");
-                let storage = SqliteStorage::open(&db_path)?;
-                let registry = LanguageRegistry::new();
-                let mut pipeline = IndexPipeline::new(storage, registry);
-                for path in &changed {
-                    match pipeline.index_file(path, &project_root) {
-                        Ok(n) => println!("  {} — {} regions", path.display(), n),
-                        Err(e) => eprintln!("  {} — error: {}", path.display(), e),
-                    }
-                }
+    while let Some(changed) = debouncer.next_batch() {
+        println!("Re-indexing {} file(s)...", changed.len());
+        let db_path = index_dir.join("index.db");
+        let storage = SqliteStorage::open(&db_path)?;
+        let registry = LanguageRegistry::new();
+        let mut pipeline = IndexPipeline::new(storage, registry);
+        for path in &changed {
+            match pipeline.index_file(path, &project_root) {
+                Ok(n) => println!("  {} — {} regions", path.display(), n),
+                Err(e) => eprintln!("  {} — error: {}", path.display(), e),
             }
-            None => break,
         }
     }
     Ok(())
