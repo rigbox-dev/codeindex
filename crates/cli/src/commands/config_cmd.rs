@@ -34,7 +34,7 @@ pub fn run_set(key: &str, value: &str) -> Result<()> {
     config.save(&project_root)?;
     // Log the config change to the activity log if a database exists.
     let index_dir = project_root.join(&config.index.path);
-    if let Ok(storage) = SqliteStorage::open(&index_dir.join("index.db")) {
+    if let Ok(storage) = SqliteStorage::open(index_dir.join("index.db")) {
         let _ = storage.insert_activity(
             "config_change",
             &format!(r#"{{"key":"{}","value":"{}"}}"#, key, value),

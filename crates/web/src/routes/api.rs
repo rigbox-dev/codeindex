@@ -55,6 +55,7 @@ pub async fn search(
 }
 
 #[derive(Serialize)]
+#[derive(Default)]
 pub struct StatsResponse {
     pub total_files: i64,
     pub total_regions: i64,
@@ -67,21 +68,6 @@ pub struct StatsResponse {
     pub last_indexed_at: Option<i64>,
 }
 
-impl Default for StatsResponse {
-    fn default() -> Self {
-        Self {
-            total_files: 0,
-            total_regions: 0,
-            total_dependencies: 0,
-            languages: Vec::new(),
-            region_kinds: Vec::new(),
-            dep_kinds: Vec::new(),
-            db_size_bytes: 0,
-            vector_size_bytes: 0,
-            last_indexed_at: None,
-        }
-    }
-}
 
 #[derive(Serialize)]
 pub struct LabelCount {
