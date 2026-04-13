@@ -210,6 +210,188 @@ pub async fn stats(State(state): State<SharedState>) -> Json<StatsResponse> {
     })
 }
 
+// ── Dependency Graph API ─────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct GraphData {
+    pub nodes: Vec<serde_json::Value>,
+    pub edges: Vec<serde_json::Value>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct GraphParams {
+    #[serde(default = "default_graph_limit")]
+    pub limit: usize,
+}
+fn default_graph_limit() -> usize { 200 }
+
+#[derive(Serialize)]
+pub struct NodeDetail {
+    pub region_id: i64,
+    pub name: String,
+    pub kind: String,
+    pub file: String,
+    pub lines: [u32; 2],
+    pub signature: String,
+    pub outgoing: Vec<DepEdge>,
+    pub incoming: Vec<DepEdge>,
+}
+
+#[derive(Serialize)]
+pub struct DepEdge {
+    pub name: String,
+    pub file: String,
+    pub kind: String,
+}
+
+pub async fn graph_data(
+    State(state): State<SharedState>,
+    Query(params): Query<GraphParams>,
+) -> impl IntoResponse {
+    let storage = match SqliteStorage::open(&state.db_path) {
+        Ok(s) => s,
+        Err(_) => return Json(GraphData { nodes: vec![], edges: vec![] }).into_response(),
+    };
+
+    let files = match storage.list_all_files() {
+        Ok(f) => f,
+        Err(_) => return Json(GraphData { nodes: vec![], edges: vec![] }).into_response(),
+    };
+
+    let mut nodes: Vec<serde_json::Value> = Vec::new();
+    let mut edges: Vec<serde_json::Value> = Vec::new();
+    let mut region_count = 0usize;
+
+    for file in &files {
+        if region_count >= params.limit {
+            break;
+        }
+
+        let regions = match storage.get_regions_for_file(file.file_id) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+
+        if regions.is_empty() {
+            continue;
+        }
+
+        // Short path label for file compound node
+        let short_path = file.path.rfind('/').map(|p| &file.path[p+1..]).unwrap_or(&file.path);
+        nodes.push(serde_json::json!({
+            "data": {
+                "id": format!("f_{}", file.file_id),
+                "label": short_path,
+            }
+        }));
+
+        for region in &regions {
+            if region_count >= params.limit {
+                break;
+            }
+            nodes.push(serde_json::json!({
+                "data": {
+                    "id": format!("r_{}", region.region_id),
+                    "label": region.name,
+                    "kind": region.kind.as_str(),
+                    "file": file.path,
+                    "parent": format!("f_{}", file.file_id),
+                }
+            }));
+            region_count += 1;
+
+            // Collect edges for this region
+            let deps = match storage.get_dependencies_from(region.region_id) {
+                Ok(d) => d,
+                Err(_) => continue,
+            };
+            for dep in deps {
+                if let Some(target_id) = dep.target_region_id {
+                    edges.push(serde_json::json!({
+                        "data": {
+                            "source": format!("r_{}", region.region_id),
+                            "target": format!("r_{}", target_id),
+                            "kind": dep.kind.as_str(),
+                        }
+                    }));
+                }
+            }
+        }
+    }
+
+    Json(GraphData { nodes, edges }).into_response()
+}
+
+pub async fn graph_node_detail(
+    State(state): State<SharedState>,
+    Path(id): Path<i64>,
+) -> impl IntoResponse {
+    let storage = match SqliteStorage::open(&state.db_path) {
+        Ok(s) => s,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+
+    let region = match storage.get_region(id) {
+        Ok(Some(r)) => r,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+
+    let file = match storage.get_file(region.file_id) {
+        Ok(Some(f)) => f,
+        _ => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+
+    // Outgoing deps
+    let outgoing_deps = storage.get_dependencies_from(id).unwrap_or_default();
+    let mut outgoing: Vec<DepEdge> = Vec::new();
+    for dep in outgoing_deps {
+        if let Some(target_id) = dep.target_region_id {
+            if let Ok(Some(target_region)) = storage.get_region(target_id) {
+                let target_file = storage.get_file(target_region.file_id)
+                    .ok().flatten()
+                    .map(|f| f.path)
+                    .unwrap_or_default();
+                outgoing.push(DepEdge {
+                    name: target_region.name,
+                    file: target_file,
+                    kind: dep.kind.as_str().to_string(),
+                });
+            }
+        }
+    }
+
+    // Incoming deps
+    let incoming_deps = storage.get_dependencies_to(id).unwrap_or_default();
+    let mut incoming: Vec<DepEdge> = Vec::new();
+    for dep in incoming_deps {
+        if let Ok(Some(src_region)) = storage.get_region(dep.source_region_id) {
+            let src_file = storage.get_file(src_region.file_id)
+                .ok().flatten()
+                .map(|f| f.path)
+                .unwrap_or_default();
+            incoming.push(DepEdge {
+                name: src_region.name,
+                file: src_file,
+                kind: dep.kind.as_str().to_string(),
+            });
+        }
+    }
+
+    let detail = NodeDetail {
+        region_id: region.region_id,
+        name: region.name,
+        kind: region.kind.as_str().to_string(),
+        file: file.path,
+        lines: [region.start_line, region.end_line],
+        signature: region.signature,
+        outgoing,
+        incoming,
+    };
+
+    Json(detail).into_response()
+}
+
 // ── File Explorer API ────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
