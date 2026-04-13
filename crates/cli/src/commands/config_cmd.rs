@@ -1,5 +1,6 @@
 use anyhow::Result;
 use codeindex_core::config::Config;
+use codeindex_core::storage::sqlite::SqliteStorage;
 
 pub fn run_show() -> Result<()> {
     let project_root = std::env::current_dir()?;
@@ -31,6 +32,15 @@ pub fn run_set(key: &str, value: &str) -> Result<()> {
         _ => anyhow::bail!("Unknown config key: {}", key),
     }
     config.save(&project_root)?;
+    // Log the config change to the activity log if a database exists.
+    let index_dir = project_root.join(&config.index.path);
+    if let Ok(storage) = SqliteStorage::open(&index_dir.join("index.db")) {
+        let _ = storage.insert_activity(
+            "config_change",
+            &format!(r#"{{"key":"{}","value":"{}"}}"#, key, value),
+            "cli",
+        );
+    }
     println!("Set {} = {}", key, value);
     Ok(())
 }

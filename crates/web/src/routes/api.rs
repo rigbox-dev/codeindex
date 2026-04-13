@@ -9,7 +9,8 @@ use codeindex_core::storage::sqlite::SqliteStorage;
 use codeindex_core::storage::vectors::VectorIndex;
 use codeindex_core::embedding::MockEmbeddingProvider;
 use codeindex_core::query::{QueryEngine, QueryOptions};
-use codeindex_core::model::QueryResponse;
+use codeindex_core::model::{ActivityEntry, QueryResponse};
+use codeindex_core::config::Config;
 
 #[derive(serde::Deserialize)]
 pub struct SearchParams {
@@ -529,4 +530,56 @@ pub async fn get_file_source(
     };
 
     Json(source).into_response()
+}
+
+// ── Config API ───────────────────────────────────────────────────────────────
+
+pub async fn get_config(State(state): State<SharedState>) -> impl IntoResponse {
+    match Config::load(&state.project_root) {
+        Ok(config) => Json(config).into_response(),
+        Err(_) => Json(Config::default()).into_response(),
+    }
+}
+
+pub async fn update_config(
+    State(state): State<SharedState>,
+    Json(config): Json<Config>,
+) -> impl IntoResponse {
+    match config.save(&state.project_root) {
+        Ok(()) => (
+            StatusCode::OK,
+            r#"<span style="color:#3fb950;">&#10003; Settings saved</span>"#,
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!(r#"<span style="color:#f85149;">&#10007; Save failed: {}</span>"#, e),
+        )
+            .into_response(),
+    }
+}
+
+// ── Activity API ─────────────────────────────────────────────────────────────
+
+#[derive(serde::Deserialize)]
+pub struct ActivityParams {
+    #[serde(default = "default_activity_limit")]
+    pub limit: usize,
+    #[serde(default)]
+    pub offset: usize,
+}
+fn default_activity_limit() -> usize { 50 }
+
+pub async fn list_activity(
+    State(state): State<SharedState>,
+    Query(params): Query<ActivityParams>,
+) -> impl IntoResponse {
+    let storage = match SqliteStorage::open(&state.db_path) {
+        Ok(s) => s,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<ActivityEntry>::new())).into_response(),
+    };
+    match storage.list_activity(params.limit, params.offset) {
+        Ok(entries) => Json(entries).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<ActivityEntry>::new())).into_response(),
+    }
 }

@@ -95,6 +95,15 @@ impl SqliteStorage {
 
             CREATE INDEX IF NOT EXISTS idx_dependencies_symbol
                 ON dependencies(target_symbol);
+
+            CREATE TABLE IF NOT EXISTS activity_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp INTEGER NOT NULL,
+                event_type TEXT NOT NULL,
+                detail TEXT NOT NULL,
+                source TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_activity_timestamp ON activity_log(timestamp DESC);
             ",
         )?;
 
@@ -360,6 +369,37 @@ impl SqliteStorage {
     pub fn vacuum(&self) -> Result<()> {
         self.conn.execute_batch("VACUUM")?;
         Ok(())
+    }
+
+    // -------------------------------------------------------------------------
+    // Activity log
+    // -------------------------------------------------------------------------
+
+    /// Insert an activity log entry, returning the new row id.
+    pub fn insert_activity(&self, event_type: &str, detail: &str, source: &str) -> Result<i64> {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() as i64;
+        self.conn.execute(
+            "INSERT INTO activity_log (timestamp, event_type, detail, source) VALUES (?1, ?2, ?3, ?4)",
+            params![now, event_type, detail, source],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    /// List activity log entries, most-recent first.
+    pub fn list_activity(&self, limit: usize, offset: usize) -> Result<Vec<crate::model::ActivityEntry>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, timestamp, event_type, detail, source FROM activity_log ORDER BY timestamp DESC LIMIT ?1 OFFSET ?2"
+        )?;
+        let rows = stmt.query_map(params![limit as i64, offset as i64], |row| {
+            Ok(crate::model::ActivityEntry {
+                id: row.get(0)?,
+                timestamp: row.get(1)?,
+                event_type: row.get(2)?,
+                detail: row.get(3)?,
+                source: row.get(4)?,
+            })
+        })?;
+        Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
     }
 }
 

@@ -19,6 +19,11 @@ pub fn run() -> Result<()> {
         }
     }
     storage.vacuum()?;
+    let _ = storage.insert_activity(
+        "gc",
+        &format!(r#"{{"removed":{}}}"#, removed),
+        "cli",
+    );
     let size = std::fs::metadata(&db_path)
         .map(|m| m.len())
         .unwrap_or(0);

@@ -64,6 +64,15 @@ pub struct Summary {
     pub model_version: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityEntry {
+    pub id: i64,
+    pub timestamp: i64,
+    pub event_type: String,
+    pub detail: String,
+    pub source: String,
+}
+
 /// The response returned to callers after a query.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryResponse {

@@ -34,6 +34,11 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/api/files", get(routes::api::list_files))
         .route("/api/files/:id", get(routes::api::get_file_detail))
         .route("/api/files/:id/source", get(routes::api::get_file_source))
+        .route("/settings", get(routes::settings::page))
+        .route("/activity", get(routes::activity::page))
+        .route("/activity/more", get(routes::activity::more))
+        .route("/api/config", get(routes::api::get_config).put(routes::api::update_config))
+        .route("/api/activity", get(routes::api::list_activity))
         .route("/assets/{*path}", get(static_handler))
         .with_state(state)
 }

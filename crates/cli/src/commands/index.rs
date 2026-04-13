@@ -40,6 +40,19 @@ pub fn run(incremental: bool, quiet: bool) -> Result<()> {
         .index_project(&project_root)
         .with_context(|| "Indexing failed")?;
 
+    // Log the indexing activity.
+    let storage = SqliteStorage::open(&db_path).ok();
+    if let Some(s) = storage {
+        let _ = s.insert_activity(
+            "index",
+            &format!(
+                r#"{{"files":{},"regions":{},"dependencies":{}}}"#,
+                stats.files_indexed, stats.regions_extracted, stats.dependencies_extracted
+            ),
+            "cli",
+        );
+    }
+
     if !quiet {
         println!(
             "Done. Indexed {} file(s), {} region(s), {} dependency(s).",
