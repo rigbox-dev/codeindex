@@ -256,6 +256,12 @@ pub async fn graph_data(
     let mut edges: Vec<serde_json::Value> = Vec::new();
     let mut region_count = 0usize;
 
+    // Build a symbol name → region_id lookup for edge resolution.
+    // Deps are stored with target_symbol but target_region_id is usually NULL.
+    let mut symbol_to_region: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+    let mut included_region_ids: std::collections::HashSet<i64> = std::collections::HashSet::new();
+
+    // First pass: collect nodes and build symbol index
     for file in &files {
         if region_count >= params.limit {
             break;
@@ -270,7 +276,6 @@ pub async fn graph_data(
             continue;
         }
 
-        // Short path label for file compound node
         let short_path = file.path.rfind('/').map(|p| &file.path[p+1..]).unwrap_or(&file.path);
         nodes.push(serde_json::json!({
             "data": {
@@ -286,25 +291,36 @@ pub async fn graph_data(
             nodes.push(serde_json::json!({
                 "data": {
                     "id": format!("r_{}", region.region_id),
-                    "label": region.name,
+                    "label": &region.name,
                     "kind": region.kind.as_str(),
-                    "file": file.path,
+                    "file": &file.path,
                     "parent": format!("f_{}", file.file_id),
                 }
             }));
+            symbol_to_region.insert(region.name.clone(), region.region_id);
+            included_region_ids.insert(region.region_id);
             region_count += 1;
+        }
+    }
 
-            // Collect edges for this region
-            let deps = match storage.get_dependencies_from(region.region_id) {
-                Ok(d) => d,
-                Err(_) => continue,
-            };
-            for dep in deps {
-                if let Some(target_id) = dep.target_region_id {
+    // Second pass: resolve edges by symbol name
+    for &region_id in &included_region_ids {
+        let deps = match storage.get_dependencies_from(region_id) {
+            Ok(d) => d,
+            Err(_) => continue,
+        };
+        for dep in deps {
+            // Try resolved target first, then fall back to symbol lookup
+            let target_id = dep.target_region_id
+                .or_else(|| symbol_to_region.get(&dep.target_symbol).copied());
+
+            if let Some(tid) = target_id {
+                // Only add edge if target node is in the graph
+                if included_region_ids.contains(&tid) && tid != region_id {
                     edges.push(serde_json::json!({
                         "data": {
-                            "source": format!("r_{}", region.region_id),
-                            "target": format!("r_{}", target_id),
+                            "source": format!("r_{}", region_id),
+                            "target": format!("r_{}", tid),
                             "kind": dep.kind.as_str(),
                         }
                     }));
