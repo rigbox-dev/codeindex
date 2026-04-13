@@ -7,9 +7,9 @@ publish = false
 [dependencies]
 anyhow = { workspace = true }
 tree-sitter = { workspace = true }
-tree-sitter-rust = "0.23"
+tree-sitter-rust = "0.24.2"
 tree-sitter-typescript = "0.23"
-tree-sitter-python = "0.23"
-tree-sitter-go = "0.23"
-tree-sitter-c = "0.23"
+tree-sitter-python = "0.25"
+tree-sitter-go = "0.25.0"
+tree-sitter-c = "0.24.1"
 tree-sitter-cpp = "0.23"

@@ -10,7 +10,7 @@ codeindex-tree-sitter-langs = { path = "../tree-sitter-langs" }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = "0.3"
-notify = "6"
+notify = "8.2.0"
 ignore = "0.4"
 
 [dev-dependencies]
