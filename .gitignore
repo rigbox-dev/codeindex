@@ -1,2 +1,4 @@
 /target
 .codeindex/
+crates/web/graph-ui/node_modules/
+crates/web/graph-ui/dist/

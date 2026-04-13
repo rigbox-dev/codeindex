@@ -1,0 +1,26 @@
+body {
+  margin: 0;
+  background: var(--bg-body, #0d1117);
+  font-family: var(--font-body, 'Inter', sans-serif);
+}
+
+.react-flow__minimap {
+  border: 1px solid var(--border, #30363d);
+  border-radius: 8px;
+}
+
+.react-flow__controls {
+  border: 1px solid var(--border, #30363d);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: var(--bg-surface, #161b22);
+  border-color: var(--border, #30363d);
+  fill: var(--text-muted, #8b949e);
+}
+
+.react-flow__controls-button:hover {
+  background: var(--bg-elevated, #1c2129);
+}
