@@ -1,5 +1,6 @@
 use anyhow::{bail, Result};
 use instant_distance::{Builder, HnswMap, Search};
+use serde::{Deserialize, Serialize};
 
 /// A newtype wrapper around a dense float vector that implements
 /// `instant_distance::Point` using cosine distance.
@@ -21,6 +22,20 @@ impl instant_distance::Point for Point {
     }
 }
 
+/// Serializable snapshot entry for persistence.
+#[derive(Serialize, Deserialize)]
+struct SnapshotEntry {
+    region_id: i64,
+    vector: Vec<f32>,
+}
+
+/// Serializable snapshot for persistence.
+#[derive(Serialize, Deserialize)]
+struct Snapshot {
+    dimension: usize,
+    entries: Vec<SnapshotEntry>,
+}
+
 /// An HNSW-backed approximate nearest-neighbour index over region embeddings.
 ///
 /// Usage pattern:
@@ -32,6 +47,8 @@ pub struct VectorIndex {
     dimension: usize,
     /// Staging area: (vector, region_id) pairs accumulated before `build()`.
     points: Vec<(Point, i64)>,
+    /// Snapshot for persistence: (vector, region_id) pairs.
+    snapshot: Vec<(Vec<f32>, i64)>,
 }
 
 impl VectorIndex {
@@ -41,7 +58,13 @@ impl VectorIndex {
             map: None,
             dimension,
             points: Vec::new(),
+            snapshot: Vec::new(),
         }
+    }
+
+    /// Returns `true` if no vectors have been added yet.
+    pub fn is_empty(&self) -> bool {
+        self.points.is_empty()
     }
 
     /// Stage a (region_id, vector) pair for inclusion in the next `build()` call.
@@ -53,6 +76,7 @@ impl VectorIndex {
                 vector.len()
             );
         }
+        self.snapshot.push((vector.clone(), region_id));
         self.points.push((Point(vector), region_id));
         Ok(())
     }
@@ -110,19 +134,44 @@ impl VectorIndex {
         Ok(results)
     }
 
-    /// Persist the index to `dir`.
-    ///
-    /// MVP stub: writes nothing but does not error.
-    pub fn save(&self, _dir: &std::path::Path) -> Result<()> {
+    /// Persist the index to `dir` as `vectors.json`.
+    pub fn save(&self, dir: &std::path::Path) -> Result<()> {
+        let entries: Vec<SnapshotEntry> = self
+            .snapshot
+            .iter()
+            .map(|(vec, rid)| SnapshotEntry {
+                region_id: *rid,
+                vector: vec.clone(),
+            })
+            .collect();
+
+        let snapshot = Snapshot {
+            dimension: self.dimension,
+            entries,
+        };
+
+        let path = dir.join("vectors.json");
+        let json = serde_json::to_string(&snapshot)?;
+        std::fs::write(path, json)?;
         Ok(())
     }
 
-    /// Load an index from `dir`.
-    ///
-    /// MVP stub: returns an empty, unbuilt index.
+    /// Load an index from `dir/vectors.json`, rebuild it, and return it.
     pub fn load(dir: &std::path::Path, dimension: usize) -> Result<Self> {
-        let _ = dir;
-        Ok(Self::new(dimension))
+        let path = dir.join("vectors.json");
+        if !path.exists() {
+            return Ok(Self::new(dimension));
+        }
+
+        let json = std::fs::read_to_string(&path)?;
+        let snapshot: Snapshot = serde_json::from_str(&json)?;
+
+        let mut index = Self::new(snapshot.dimension);
+        for entry in snapshot.entries {
+            index.add(entry.region_id, entry.vector)?;
+        }
+        index.build()?;
+        Ok(index)
     }
 }
 
@@ -183,5 +232,31 @@ mod tests {
         let mut idx = VectorIndex::new(4);
         let err = idx.add(1, vec![1.0, 0.0]).unwrap_err();
         assert!(err.to_string().contains("dimension mismatch"));
+    }
+
+    #[test]
+    fn is_empty_reflects_added_vectors() {
+        let mut idx = VectorIndex::new(4);
+        assert!(idx.is_empty(), "new index should be empty");
+        idx.add(1, unit_vec(4, 0)).unwrap();
+        assert!(!idx.is_empty(), "index with a vector should not be empty");
+    }
+
+    #[test]
+    fn save_and_load_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let dim = 8;
+        let mut idx = VectorIndex::new(dim);
+        idx.add(10, unit_vec(dim, 0)).unwrap();
+        idx.add(20, unit_vec(dim, 1)).unwrap();
+        idx.add(30, unit_vec(dim, 2)).unwrap();
+        idx.build().unwrap();
+
+        idx.save(dir.path()).unwrap();
+
+        let loaded = VectorIndex::load(dir.path(), dim).unwrap();
+        let results = loaded.search(&unit_vec(dim, 1), 3).unwrap();
+        assert!(!results.is_empty(), "loaded index should return results");
+        assert_eq!(results[0].0, 20, "nearest neighbour should be region 20 after load");
     }
 }

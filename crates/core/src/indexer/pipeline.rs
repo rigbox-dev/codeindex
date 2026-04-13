@@ -3,8 +3,10 @@ use std::path::Path;
 
 use codeindex_tree_sitter_langs::{parse_source, LanguageRegistry};
 
+use crate::embedding::EmbeddingProvider;
 use crate::model::{Dependency, Region};
 use crate::storage::sqlite::SqliteStorage;
+use crate::storage::vectors::VectorIndex;
 
 /// Statistics returned after indexing a project or file.
 #[derive(Debug, Default, Clone)]
@@ -18,16 +20,37 @@ pub struct IndexStats {
 pub struct IndexPipeline {
     storage: SqliteStorage,
     registry: LanguageRegistry,
+    embedding_provider: Option<Box<dyn EmbeddingProvider>>,
+    vector_index: VectorIndex,
 }
 
 impl IndexPipeline {
     pub fn new(storage: SqliteStorage, registry: LanguageRegistry) -> Self {
-        Self { storage, registry }
+        Self {
+            storage,
+            registry,
+            embedding_provider: None,
+            vector_index: VectorIndex::new(384),
+        }
     }
 
-    /// Consume self and return the underlying storage.
+    /// Attach an embedding provider. The vector index dimension is updated to
+    /// match the provider's output dimension.
+    pub fn with_embedding_provider(mut self, provider: Box<dyn EmbeddingProvider>) -> Self {
+        let dim = provider.dimension();
+        self.embedding_provider = Some(provider);
+        self.vector_index = VectorIndex::new(dim);
+        self
+    }
+
+    /// Consume self and return the underlying storage (backward compat).
     pub fn into_storage(self) -> SqliteStorage {
         self.storage
+    }
+
+    /// Consume self and return (storage, vector_index).
+    pub fn into_parts(self) -> (SqliteStorage, VectorIndex) {
+        (self.storage, self.vector_index)
     }
 
     /// Borrow the underlying storage.
@@ -62,6 +85,15 @@ impl IndexPipeline {
             let region_count = self.index_file(&path, project_root)?;
             stats.files_indexed += 1;
             stats.regions_extracted += region_count;
+        }
+
+        // Build and persist the vector index if we have an embedding provider.
+        if self.embedding_provider.is_some() && !self.vector_index.is_empty() {
+            self.vector_index.build()?;
+            let index_dir = project_root.join(".codeindex");
+            if index_dir.exists() {
+                self.vector_index.save(&index_dir)?;
+            }
         }
 
         Ok(stats)
@@ -172,6 +204,45 @@ impl IndexPipeline {
             self.storage.insert_dependency(&dep)?;
         }
 
+        // Generate embeddings for each region if a provider is configured.
+        if let Some(provider) = &self.embedding_provider {
+            let source_str = String::from_utf8_lossy(&source);
+            for (i, extracted) in extracted_regions.iter().enumerate() {
+                let rid = region_ids[i];
+                let region_source =
+                    &source_str[extracted.start_byte as usize..extracted.end_byte as usize];
+                let dep_symbols: Vec<String> = extracted_deps
+                    .iter()
+                    .filter(|d| d.source_region_index == i)
+                    .map(|d| d.target_symbol.clone())
+                    .collect();
+                let text = crate::embedding::compose_embedding_text(
+                    &language_id,
+                    &Region {
+                        region_id: rid,
+                        file_id,
+                        parent_region_id: None,
+                        kind: extracted.kind.into(),
+                        name: extracted.name.clone(),
+                        start_line: extracted.start_line,
+                        end_line: extracted.end_line,
+                        start_byte: extracted.start_byte,
+                        end_byte: extracted.end_byte,
+                        signature: extracted.signature.clone(),
+                        content_hash: String::new(),
+                    },
+                    None,
+                    region_source,
+                    &dep_symbols,
+                );
+                if let Ok(vecs) = provider.embed(&[text]) {
+                    if let Some(vec) = vecs.into_iter().next() {
+                        let _ = self.vector_index.add(rid, vec);
+                    }
+                }
+            }
+        }
+
         Ok(region_ids.len())
     }
 }
@@ -230,5 +301,42 @@ mod tests {
             stats.regions_extracted > 0,
             "expected at least some regions, got 0"
         );
+    }
+
+    #[test]
+    fn indexes_with_embedding_provider() {
+        use crate::embedding::MockEmbeddingProvider;
+
+        let storage = SqliteStorage::open_in_memory().unwrap();
+        let registry = LanguageRegistry::new();
+        let provider = Box::new(MockEmbeddingProvider::new(64));
+        let mut pipeline = IndexPipeline::new(storage, registry)
+            .with_embedding_provider(provider);
+
+        let root = fixture_root();
+        let stats = pipeline.index_project(&root).unwrap();
+
+        assert!(stats.regions_extracted > 0, "should have indexed regions");
+
+        let (_, vector_index) = pipeline.into_parts();
+        // After index_project with an embedding provider, the vector index
+        // should have been built (map is Some if non-empty).
+        // We verify by checking is_empty() is false (points were added).
+        // Note: build() clears points but keeps snapshot; is_empty() checks points.
+        // After build(), points are still retained (iter().cloned() is used).
+        // So is_empty should still be false.
+        assert!(
+            !vector_index.is_empty(),
+            "vector index should not be empty after embedding"
+        );
+    }
+
+    #[test]
+    fn into_parts_returns_both() {
+        let storage = SqliteStorage::open_in_memory().unwrap();
+        let registry = LanguageRegistry::new();
+        let pipeline = IndexPipeline::new(storage, registry);
+        let (_storage, vector_index) = pipeline.into_parts();
+        assert!(vector_index.is_empty(), "fresh vector index should be empty");
     }
 }
