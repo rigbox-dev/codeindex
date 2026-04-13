@@ -1,9 +1,55 @@
-use axum::extract::State;
+use axum::extract::{State, Query};
 use axum::Json;
 use serde::Serialize;
 use std::fs;
 use crate::state::SharedState;
 use codeindex_core::storage::sqlite::SqliteStorage;
+use codeindex_core::storage::vectors::VectorIndex;
+use codeindex_core::embedding::MockEmbeddingProvider;
+use codeindex_core::query::{QueryEngine, QueryOptions};
+use codeindex_core::model::QueryResponse;
+
+#[derive(serde::Deserialize)]
+pub struct SearchParams {
+    pub q: String,
+    #[serde(default = "default_top")]
+    pub top: usize,
+    #[serde(default = "default_depth")]
+    pub depth: usize,
+}
+fn default_top() -> usize { 10 }
+fn default_depth() -> usize { 1 }
+
+pub async fn search(
+    State(state): State<SharedState>,
+    Query(params): Query<SearchParams>,
+) -> Json<QueryResponse> {
+    let empty = QueryResponse {
+        query: params.q.clone(),
+        results: Vec::new(),
+        graph_context: None,
+    };
+
+    let storage = match SqliteStorage::open(&state.db_path) {
+        Ok(s) => s,
+        Err(_) => return Json(empty),
+    };
+
+    let provider = MockEmbeddingProvider::new(384);
+    let vectors = VectorIndex::load(&state.index_dir, 384).unwrap_or_else(|_| VectorIndex::new(384));
+
+    let engine = QueryEngine::new(&storage, &vectors, &provider, &state.project_root);
+    let opts = QueryOptions {
+        top: params.top,
+        depth: params.depth,
+        include_code: true,
+    };
+
+    match engine.query(&params.q, &opts) {
+        Ok(response) => Json(response),
+        Err(_) => Json(empty),
+    }
+}
 
 #[derive(Serialize)]
 pub struct StatsResponse {
