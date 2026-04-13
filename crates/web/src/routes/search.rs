@@ -5,7 +5,8 @@ use crate::templates;
 use crate::routes::api::SearchParams;
 use codeindex_core::storage::sqlite::SqliteStorage;
 use codeindex_core::storage::vectors::VectorIndex;
-use codeindex_core::embedding::MockEmbeddingProvider;
+use codeindex_core::embedding::{self, EmbeddingProvider, MockEmbeddingProvider};
+use codeindex_core::embedding::local::LocalEmbeddingProvider;
 use codeindex_core::query::{QueryEngine, QueryOptions};
 use codeindex_core::model::QueryResult;
 
@@ -138,10 +139,16 @@ pub async fn results(
         Err(_) => return Html(render_results(&empty_response)),
     };
 
-    let provider = MockEmbeddingProvider::new(384);
-    let vectors = VectorIndex::load(&state.index_dir, 384).unwrap_or_else(|_| VectorIndex::new(384));
+    let provider: Box<dyn EmbeddingProvider> = match embedding::ensure_model()
+        .and_then(|dir| LocalEmbeddingProvider::from_dir(&dir))
+    {
+        Ok(p) => Box::new(p),
+        Err(_) => Box::new(MockEmbeddingProvider::new(384)),
+    };
+    let dim = provider.dimension();
+    let vectors = VectorIndex::load(&state.index_dir, dim).unwrap_or_else(|_| VectorIndex::new(dim));
 
-    let engine = QueryEngine::new(&storage, &vectors, &provider, &state.project_root);
+    let engine = QueryEngine::new(&storage, &vectors, provider.as_ref(), &state.project_root);
     let opts = QueryOptions {
         top: params.top,
         depth: params.depth,
