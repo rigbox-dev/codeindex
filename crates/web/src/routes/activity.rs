@@ -23,7 +23,7 @@ pub async fn page(State(state): State<SharedState>) -> Html<String> {
                     hx-get="/activity/more?offset={next}"
                     hx-trigger="revealed"
                     hx-swap="outerHTML">
-                <td colspan="4" class="text-muted" style="text-align:center;padding:12px;">Loading more…</td>
+                <td colspan="4" class="text-muted text-center p-1">Loading more…</td>
             </tr>"##,
             next = PAGE_SIZE
         )
@@ -94,7 +94,7 @@ pub async fn more(
                     hx-get="/activity/more?offset={next}"
                     hx-trigger="revealed"
                     hx-swap="outerHTML">
-                <td colspan="4" class="text-muted" style="text-align:center;padding:12px;">Loading more…</td>
+                <td colspan="4" class="text-muted text-center p-1">Loading more…</td>
             </tr>"##,
             next = next
         )
@@ -140,13 +140,13 @@ fn render_rows(entries: &[ActivityEntry], _offset: usize) -> String {
 
         html.push_str(&format!(
             r##"<tr>
-                <td class="text-muted font-mono" style="white-space:nowrap;">
+                <td class="text-muted font-mono nowrap">
                     <span data-ts="{ts}">{ts}</span>
                 </td>
                 <td>
                     <span class="{badge_class}">{event_type}</span>
                 </td>
-                <td class="font-mono" style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{detail}</td>
+                <td class="font-mono truncate" style="max-width:420px;">{detail}</td>
                 <td class="text-muted">{source}</td>
             </tr>"##,
             ts = entry.timestamp,

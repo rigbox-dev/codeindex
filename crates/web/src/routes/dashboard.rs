@@ -36,7 +36,7 @@ pub async fn index(State(_state): State<SharedState>) -> Html<String> {
                 <div class="card-header">
                     <h3 class="card-title">Language Breakdown</h3>
                 </div>
-                <div style="position:relative;height:220px;">
+                <div class="chart-inner">
                     <canvas id="lang-chart"></canvas>
                 </div>
             </div>
@@ -44,7 +44,7 @@ pub async fn index(State(_state): State<SharedState>) -> Html<String> {
                 <div class="card-header">
                     <h3 class="card-title">Region Kinds</h3>
                 </div>
-                <div style="position:relative;height:220px;">
+                <div class="chart-inner">
                     <canvas id="kind-chart"></canvas>
                 </div>
             </div>

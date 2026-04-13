@@ -88,13 +88,13 @@ fn render_results(results: &[QueryResult]) -> String {
         html.push_str(&format!(
             "<div class=\"card mb-1\">\n\
     <div class=\"flex justify-between items-center\">\n\
-        <div>\n\
+        <div class=\"flex items-center gap-1\">\n\
             <strong>{name}</strong>\n\
-            <span class=\"badge badge-{kind_str}\" style=\"margin-left:8px;\">{kind_str}</span>\n\
+            <span class=\"badge badge-{kind_str}\">{kind_str}</span>\n\
         </div>\n\
-        <span class=\"text-muted\" style=\"font-size:0.85em\">{file}:{start}-{end}</span>\n\
+        <span class=\"text-muted text-sm\">{file}:{start}-{end}</span>\n\
     </div>\n\
-    <div class=\"mt-1\"><code class=\"text-muted font-mono\" style=\"font-size:0.85em\">{sig}</code></div>\n\
+    <div class=\"mt-1\"><code class=\"text-muted font-mono text-sm\">{sig}</code></div>\n\
     <div class=\"relevance-bar mt-1\">\n\
         <div class=\"fill\" style=\"width:{relevance_pct:.1}%\"></div>\n\
     </div>",
@@ -104,8 +104,8 @@ fn render_results(results: &[QueryResult]) -> String {
             let code_escaped = html_escape(code);
             html.push_str(&format!(
                 "\n    <details class=\"mt-1\">\n\
-        <summary class=\"text-accent\" style=\"cursor:pointer;font-size:0.9em\">Show code</summary>\n\
-        <pre class=\"mt-1\" style=\"overflow:auto;\"><code class=\"language-{lang}\">{code_escaped}</code></pre>\n\
+        <summary class=\"text-accent cursor-pointer text-sm\">Show code</summary>\n\
+        <pre class=\"mt-1 overflow-auto\"><code class=\"language-{lang}\">{code_escaped}</code></pre>\n\
     </details>\n\
     <script>document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));</script>",
             ));

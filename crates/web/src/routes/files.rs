@@ -164,16 +164,16 @@ pub async fn page(State(state): State<SharedState>) -> Html<String> {
     let content = format!(r#"
         <div class="page-header">
             <h2>Files</h2>
-            <span class="text-muted" style="font-size:0.85em;">{total} files indexed</span>
+            <span class="text-muted text-sm">{total} files indexed</span>
         </div>
         <div class="files-layout">
             <!-- Left panel: file list -->
-            <div class="files-sidebar" style="padding:12px 0;">
+            <div class="files-sidebar">
                 {file_list_html}
             </div>
             <!-- Right panel: file detail -->
             <div id="file-detail" class="files-detail">
-                <div class="flex items-center justify-center text-muted" style="height:200px;">
+                <div class="flex items-center justify-center text-muted empty-placeholder">
                     Select a file to view details
                 </div>
             </div>
@@ -194,13 +194,13 @@ pub async fn detail(
 ) -> Html<String> {
     let storage = match SqliteStorage::open(&state.db_path) {
         Ok(s) => s,
-        Err(_) => return Html(r#"<div class="text-danger" style="padding:20px;">Failed to open database.</div>"#.to_string()),
+        Err(_) => return Html(r#"<div class="text-danger files-detail">Failed to open database.</div>"#.to_string()),
     };
 
     let file = match storage.get_file(file_id) {
         Ok(Some(f)) => f,
-        Ok(None) => return Html(r#"<div class="text-danger" style="padding:20px;">File not found.</div>"#.to_string()),
-        Err(_) => return Html(r#"<div class="text-danger" style="padding:20px;">Error loading file.</div>"#.to_string()),
+        Ok(None) => return Html(r#"<div class="text-danger files-detail">File not found.</div>"#.to_string()),
+        Err(_) => return Html(r#"<div class="text-danger files-detail">Error loading file.</div>"#.to_string()),
     };
 
     let regions = storage.get_regions_for_file(file_id).unwrap_or_default();
@@ -215,7 +215,7 @@ pub async fn detail(
     // Build regions table
     let mut regions_html = String::new();
     if regions.is_empty() {
-        regions_html.push_str(r#"<p class="text-muted" style="font-size:0.9em;">No regions indexed for this file.</p>"#);
+        regions_html.push_str(r#"<p class="text-muted text-sm">No regions indexed for this file.</p>"#);
     } else {
         regions_html.push_str(r#"<table class="region-table"><thead><tr><th>Kind</th><th>Name</th><th>Lines</th><th>Signature</th></tr></thead><tbody>"#);
         for r in &regions {
@@ -227,9 +227,9 @@ pub async fn detail(
             regions_html.push_str(&format!(
                 "<tr>\
                     <td><span class=\"kind-badge {kind_class}\">{kind_escaped}</span></td>\
-                    <td style=\"font-weight:500;\">{name_escaped}</td>\
-                    <td class=\"text-muted font-mono\" style=\"white-space:nowrap;\">{}-{}</td>\
-                    <td class=\"text-muted font-mono\" style=\"font-size:0.82em;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\">{sig_escaped}</td>\
+                    <td class=\"fw-500\">{name_escaped}</td>\
+                    <td class=\"text-muted font-mono nowrap\">{}-{}</td>\
+                    <td class=\"text-muted font-mono text-sm truncate\">{sig_escaped}</td>\
                 </tr>",
                 r.start_line, r.end_line
             ));
@@ -251,8 +251,8 @@ pub async fn detail(
             format!(
                 r#"<div class="source-container">
                     <div class="source-header">
-                        <span class="text-muted" style="font-size:0.85em;">Source</span>
-                        <span class="text-muted" style="font-size:0.8em;">{} lines</span>
+                        <span class="text-muted text-sm">Source</span>
+                        <span class="text-muted text-xs">{} lines</span>
                     </div>
                     <div class="source-scroll">
                         <pre><code class="language-{hljs_lang} line-numbers">{lines_html}</code></pre>
@@ -277,14 +277,14 @@ pub async fn detail(
     };
 
     let html = format!(r#"
-        <div class="flex justify-between items-center mb-2" style="gap:12px;align-items:flex-start;">
+        <div class="flex justify-between items-center gap-1 mb-2">
             <div>
-                <h3 style="margin:0 0 4px;font-size:1.05em;">{filename_escaped}</h3>
-                <div class="text-muted font-mono" style="font-size:0.82em;">{path_escaped}</div>
+                <h3 class="mb-1">{filename_escaped}</h3>
+                <div class="text-muted font-mono text-sm">{path_escaped}</div>
             </div>
-            <div class="flex items-center gap-1" style="flex-shrink:0;">
+            <div class="flex items-center gap-1 nowrap">
                 <span class="badge {lang_class}">{lang_escaped}</span>
-                <span class="text-muted" style="font-size:0.8em;">indexed {date_str}</span>
+                <span class="text-muted text-xs">indexed {date_str}</span>
             </div>
         </div>
         <div class="mb-2">

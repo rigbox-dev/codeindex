@@ -205,13 +205,19 @@ pre code {
 }
 
 .nav-links a {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 10px 16px;
     color: var(--text-muted);
     text-decoration: none;
     font-size: 0.9em;
     border-left: 3px solid transparent;
     transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.nav-links a svg {
+    flex-shrink: 0;
 }
 
 .nav-links a:hover {
@@ -940,6 +946,27 @@ button:disabled {
 .justify-between { justify-content: space-between; }
 .gap-1           { gap: 8px; }
 .gap-2           { gap: 16px; }
+
+.text-sm  { font-size: 0.85em; }
+.text-xs  { font-size: 0.75em; }
+.truncate { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nowrap   { white-space: nowrap; }
+.chart-inner   { position: relative; height: 220px; }
+.overflow-auto { overflow: auto; }
+.cursor-pointer { cursor: pointer; }
+.fw-500  { font-weight: 500; }
+.text-center { text-align: center; }
+.p-1    { padding: 8px; }
+
+input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+}
+
+.empty-placeholder {
+    height: 200px;
+}
 
 /* ── Search Hint ─────────────────────────────────────────────────────────── */
 
