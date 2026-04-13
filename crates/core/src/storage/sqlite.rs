@@ -19,6 +19,11 @@ impl SqliteStorage {
         Ok(storage)
     }
 
+    /// Borrow the underlying SQLite connection (useful for tests and raw queries).
+    pub fn conn(&self) -> &Connection {
+        &self.conn
+    }
+
     /// Open an in-memory database (useful for tests).
     pub fn open_in_memory() -> Result<Self> {
         let conn = Connection::open_in_memory()?;

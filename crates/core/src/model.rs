@@ -100,6 +100,35 @@ pub struct DependencyRef {
     pub lines: [u32; 2],
 }
 
+impl From<codeindex_tree_sitter_langs::RegionKind> for RegionKind {
+    fn from(k: codeindex_tree_sitter_langs::RegionKind) -> Self {
+        use codeindex_tree_sitter_langs::RegionKind as R;
+        match k {
+            R::Function => Self::Function,
+            R::Method => Self::Method,
+            R::Class => Self::Class,
+            R::Struct => Self::Struct,
+            R::Module => Self::Module,
+            R::Interface => Self::Interface,
+            R::ImplBlock => Self::ImplBlock,
+            R::Enum => Self::Enum,
+        }
+    }
+}
+
+impl From<codeindex_tree_sitter_langs::DependencyKind> for DependencyKind {
+    fn from(k: codeindex_tree_sitter_langs::DependencyKind) -> Self {
+        use codeindex_tree_sitter_langs::DependencyKind as D;
+        match k {
+            D::Calls => Self::Calls,
+            D::Imports => Self::Imports,
+            D::TypeReference => Self::TypeReference,
+            D::Inherits => Self::Inherits,
+            D::Implements => Self::Implements,
+        }
+    }
+}
+
 impl RegionKind {
     pub fn as_str(&self) -> &'static str {
         match self {

@@ -1,7 +1,6 @@
-use codeindex_core::model::RegionKind;
 use tree_sitter::{Language, Node, Tree};
 
-use crate::{ExtractedDependency, ExtractedRegion, LanguagePlugin};
+use crate::{DependencyKind, ExtractedDependency, ExtractedRegion, LanguagePlugin, RegionKind};
 
 pub struct RustPlugin;
 
@@ -275,7 +274,7 @@ fn extract_use_dependency(
         source_region_index,
         target_symbol,
         target_path: Some(full_path),
-        kind: codeindex_core::model::DependencyKind::Imports,
+        kind: DependencyKind::Imports,
     });
 }
 
@@ -321,7 +320,7 @@ fn extract_call_dependency(
         source_region_index,
         target_symbol,
         target_path: None,
-        kind: codeindex_core::model::DependencyKind::Calls,
+        kind: DependencyKind::Calls,
     });
 }
 
@@ -352,7 +351,7 @@ fn extract_impl_trait_dependency(
         source_region_index,
         target_symbol,
         target_path: None,
-        kind: codeindex_core::model::DependencyKind::Implements,
+        kind: DependencyKind::Implements,
     });
 }
 
@@ -363,8 +362,7 @@ fn extract_impl_trait_dependency(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse_source;
-    use codeindex_core::model::{DependencyKind, RegionKind};
+    use crate::{parse_source, DependencyKind, RegionKind};
 
     fn parse(src: &str) -> (Tree, Vec<u8>) {
         let bytes = src.as_bytes().to_vec();

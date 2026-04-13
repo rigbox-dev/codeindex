@@ -4,7 +4,6 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-codeindex-core = { path = "../core" }
 anyhow = { workspace = true }
 tree-sitter = { workspace = true }
 tree-sitter-rust = "0.23"

@@ -1,10 +1,35 @@
 pub mod rust_lang;
 
 use anyhow::Result;
-use codeindex_core::model::{DependencyKind, RegionKind};
 use tree_sitter::{Language, Tree};
 
 pub use rust_lang::RustPlugin;
+
+/// Region kinds recognized by language plugins.
+/// Mirrors `codeindex_core::model::RegionKind` exactly so that `From` impls
+/// in core can do a zero-cost conversion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RegionKind {
+    Function,
+    Method,
+    Class,
+    Struct,
+    Module,
+    Interface,
+    ImplBlock,
+    Enum,
+}
+
+/// Dependency kinds recognized by language plugins.
+/// Mirrors `codeindex_core::model::DependencyKind` exactly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DependencyKind {
+    Calls,
+    Imports,
+    TypeReference,
+    Inherits,
+    Implements,
+}
 
 /// A region extracted from a source file during AST analysis.
 pub struct ExtractedRegion {
