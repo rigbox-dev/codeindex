@@ -14,6 +14,8 @@ codeindex-tree-sitter-langs = { path = "../tree-sitter-langs" }
 ignore = "0.4"
 instant-distance = "0.6"
 dirs = "5"
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }
 
 [dev-dependencies]
 tempfile = "3"
