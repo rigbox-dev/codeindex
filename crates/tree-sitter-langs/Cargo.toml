@@ -1,0 +1,8 @@
+[package]
+name = "codeindex-tree-sitter-langs"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+codeindex-core = { path = "../core" }
+anyhow = { workspace = true }

@@ -1,0 +1,8 @@
+[package]
+name = "codeindex-mcp-server"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+codeindex-core = { path = "../core" }
+anyhow = { workspace = true }

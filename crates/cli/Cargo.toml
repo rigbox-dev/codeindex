@@ -1,0 +1,12 @@
+[package]
+name = "codeindex"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "codeindex"
+path = "src/main.rs"
+
+[dependencies]
+codeindex-core = { path = "../core" }
+anyhow = { workspace = true }

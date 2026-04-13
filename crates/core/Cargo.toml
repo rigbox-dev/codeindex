@@ -1,0 +1,11 @@
+[package]
+name = "codeindex-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+blake3 = { workspace = true }
+tracing = { workspace = true }
