@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::path::PathBuf;
 
 use crate::model::Region;
 
@@ -118,6 +119,43 @@ impl EmbeddingProvider for MockEmbeddingProvider {
     fn model_id(&self) -> &str {
         "mock-blake3"
     }
+}
+
+const MODEL_DIR: &str = "codeindex/models";
+const MODEL_URL: &str = "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx";
+const TOKENIZER_URL: &str = "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json";
+
+/// Return the path to the model directory, downloading model files if needed.
+pub fn ensure_model() -> Result<PathBuf> {
+    let cache_dir = dirs::cache_dir()
+        .unwrap_or_else(|| PathBuf::from("/tmp"))
+        .join(MODEL_DIR);
+    std::fs::create_dir_all(&cache_dir)?;
+
+    let model_path = cache_dir.join("model.onnx");
+    let tokenizer_path = cache_dir.join("tokenizer.json");
+
+    if !model_path.exists() {
+        eprintln!("Downloading embedding model (all-MiniLM-L6-v2)...");
+        download_file(MODEL_URL, &model_path)?;
+        eprintln!("Model downloaded to {}", model_path.display());
+    }
+    if !tokenizer_path.exists() {
+        eprintln!("Downloading tokenizer...");
+        download_file(TOKENIZER_URL, &tokenizer_path)?;
+    }
+
+    Ok(cache_dir)
+}
+
+fn download_file(url: &str, dest: &std::path::Path) -> Result<()> {
+    let response = reqwest::blocking::get(url)?;
+    if !response.status().is_success() {
+        anyhow::bail!("Failed to download {}: HTTP {}", url, response.status());
+    }
+    let bytes = response.bytes()?;
+    std::fs::write(dest, &bytes)?;
+    Ok(())
 }
 
 #[cfg(test)]
