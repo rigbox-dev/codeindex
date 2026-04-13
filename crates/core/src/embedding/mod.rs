@@ -2,6 +2,9 @@ use anyhow::Result;
 
 use crate::model::Region;
 
+pub mod local;
+pub mod voyage;
+
 /// Trait for embedding providers that convert text into dense vectors.
 pub trait EmbeddingProvider: Send + Sync {
     /// Embed a batch of texts, returning one vector per input.
