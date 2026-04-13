@@ -1,0 +1,18 @@
+[package]
+name = "codeindex-web"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+codeindex-core = { path = "../core" }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors"] }
+rust-embed = "8"
+mime_guess = "2"

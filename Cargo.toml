@@ -6,6 +6,7 @@ members = [
     "crates/cli",
     "crates/mcp-server",
     "crates/daemon",
+    "crates/web",
 ]
 
 [workspace.package]
