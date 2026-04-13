@@ -14,7 +14,7 @@ pub async fn page(State(_state): State<SharedState>) -> Html<String> {
         <div class="page-header">
             <h2>Search</h2>
         </div>
-        <div style="margin-bottom:16px">
+        <div class="mb-2">
             <input
                 type="text"
                 name="q"
@@ -26,9 +26,8 @@ pub async fn page(State(_state): State<SharedState>) -> Html<String> {
                 hx-target="#results"
                 hx-include="this"
                 autocomplete="off"
-                style="width:100%;box-sizing:border-box;padding:10px 14px;font-size:1rem;border-radius:6px;border:1px solid #30363d;background:#161b22;color:#c9d1d9;outline:none;"
             />
-            <div style="margin-top:6px;font-size:0.82em;color:#8b949e;">
+            <div class="search-hint">
                 Try: authentication handler, :symbol Plugin, :file src/main.go, :deps src/auth.go::Login
             </div>
         </div>
@@ -71,7 +70,7 @@ fn language_from_ext(file: &str) -> &'static str {
 
 fn render_results(results: &[QueryResult]) -> String {
     if results.is_empty() {
-        return "<p style=\"color:#8b949e;margin-top:16px;\">No results found.</p>".to_string();
+        return r#"<p class="text-muted mt-1">No results found.</p>"#.to_string();
     }
 
     let mut html = String::new();
@@ -86,26 +85,26 @@ fn render_results(results: &[QueryResult]) -> String {
         let end = result.lines[1];
 
         html.push_str(&format!(
-            "<div class=\"card\" style=\"margin-bottom:12px;\">\n\
-    <div style=\"display:flex;justify-content:space-between;align-items:center\">\n\
+            "<div class=\"card mb-1\">\n\
+    <div class=\"flex justify-between items-center\">\n\
         <div>\n\
-            <strong style=\"color:#e6edf3\">{name}</strong>\n\
-            <span class=\"badge badge-{kind_str}\" style=\"margin-left:8px;padding:2px 8px;border-radius:4px;font-size:0.78em;background:#21262d;color:#8b949e;border:1px solid #30363d;\">{kind_str}</span>\n\
+            <strong>{name}</strong>\n\
+            <span class=\"badge badge-{kind_str}\" style=\"margin-left:8px;\">{kind_str}</span>\n\
         </div>\n\
-        <span style=\"color:#8b949e;font-size:0.85em\">{file}:{start}-{end}</span>\n\
+        <span class=\"text-muted\" style=\"font-size:0.85em\">{file}:{start}-{end}</span>\n\
     </div>\n\
-    <div style=\"margin-top:8px\"><code style=\"color:#8b949e;font-size:0.85em\">{sig}</code></div>\n\
-    <div class=\"relevance-bar\" style=\"margin-top:8px;height:4px;background:#21262d;border-radius:2px;\">\n\
-        <div class=\"fill\" style=\"width:{relevance_pct:.1}%;height:100%;background:#1f6feb;border-radius:2px;\"></div>\n\
+    <div class=\"mt-1\"><code class=\"text-muted font-mono\" style=\"font-size:0.85em\">{sig}</code></div>\n\
+    <div class=\"relevance-bar mt-1\">\n\
+        <div class=\"fill\" style=\"width:{relevance_pct:.1}%\"></div>\n\
     </div>",
         ));
 
         if let Some(code) = &result.code {
             let code_escaped = html_escape(code);
             html.push_str(&format!(
-                "\n    <details style=\"margin-top:8px\">\n\
-        <summary style=\"cursor:pointer;color:#58a6ff;font-size:0.9em\">Show code</summary>\n\
-        <pre style=\"margin-top:8px;overflow:auto;border-radius:6px;\"><code class=\"language-{lang}\">{code_escaped}</code></pre>\n\
+                "\n    <details class=\"mt-1\">\n\
+        <summary class=\"text-accent\" style=\"cursor:pointer;font-size:0.9em\">Show code</summary>\n\
+        <pre class=\"mt-1\" style=\"overflow:auto;\"><code class=\"language-{lang}\">{code_escaped}</code></pre>\n\
     </details>\n\
     <script>document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));</script>",
             ));

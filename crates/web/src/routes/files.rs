@@ -78,7 +78,7 @@ pub async fn page(State(state): State<SharedState>) -> Html<String> {
         Ok(s) => s,
         Err(_) => {
             let content = r#"<div class="page-header"><h2>Files</h2></div>
-                <div class="card" style="padding:20px;color:#f85149;">Failed to open database.</div>"#;
+                <div class="card text-danger">Failed to open database.</div>"#;
             return Html(templates::base("Files", "files", content));
         }
     };
@@ -92,7 +92,7 @@ pub async fn page(State(state): State<SharedState>) -> Html<String> {
         Ok(s) => s,
         Err(_) => {
             let content = r#"<div class="page-header"><h2>Files</h2></div>
-                <div class="card" style="padding:20px;color:#f85149;">Query preparation failed.</div>"#;
+                <div class="card text-danger">Query preparation failed.</div>"#;
             return Html(templates::base("Files", "files", content));
         }
     };
@@ -148,10 +148,9 @@ pub async fn page(State(state): State<SharedState>) -> Html<String> {
                 "<li class=\"file-entry\" \
                     hx-get=\"/files/detail/{file_id}\" \
                     hx-target=\"#file-detail\" \
-                    hx-swap=\"innerHTML\" \
-                    style=\"cursor:pointer;\">\
+                    hx-swap=\"innerHTML\">\
                     <span class=\"file-name\">{filename_escaped}</span> \
-                    <span class=\"badge {lang_class}\" style=\"font-size:0.72em;\">{lang}</span>\
+                    <span class=\"badge {lang_class}\">{lang}</span>\
                 </li>",
                 file_id = f.file_id,
             ));
@@ -165,16 +164,16 @@ pub async fn page(State(state): State<SharedState>) -> Html<String> {
     let content = format!(r#"
         <div class="page-header">
             <h2>Files</h2>
-            <span style="color:#8b949e;font-size:0.85em;">{total} files indexed</span>
+            <span class="text-muted" style="font-size:0.85em;">{total} files indexed</span>
         </div>
-        <div style="display:flex;gap:0;height:calc(100vh - 120px);overflow:hidden;">
+        <div class="files-layout">
             <!-- Left panel: file list -->
-            <div style="width:30%;min-width:220px;border-right:1px solid #30363d;overflow-y:auto;padding:12px 0;">
+            <div class="files-sidebar" style="padding:12px 0;">
                 {file_list_html}
             </div>
             <!-- Right panel: file detail -->
-            <div id="file-detail" style="flex:1;overflow-y:auto;padding:20px;">
-                <div style="display:flex;align-items:center;justify-content:center;height:200px;color:#8b949e;">
+            <div id="file-detail" class="files-detail">
+                <div class="flex items-center justify-center text-muted" style="height:200px;">
                     Select a file to view details
                 </div>
             </div>
@@ -184,38 +183,6 @@ pub async fn page(State(state): State<SharedState>) -> Html<String> {
     let scripts = r#"
         <link rel="stylesheet" href="/assets/css/hljs-dark.css">
         <script src="/assets/js/highlight.min.js"></script>
-        <style>
-            .file-tree { list-style:none; padding:0; margin:0; }
-            .file-tree ul { list-style:none; padding:0 0 0 12px; margin:0; }
-            .dir-entry { margin-bottom:2px; }
-            .dir-name { color:#58a6ff; font-size:0.82em; font-weight:600; padding:4px 12px; display:block; letter-spacing:0.2px; }
-            .file-entry { padding:4px 12px 4px 16px; border-radius:4px; transition:background 0.12s; display:flex; align-items:center; gap:6px; }
-            .file-entry:hover { background:rgba(255,255,255,0.06); }
-            .file-entry.active { background:rgba(88,166,255,0.12); }
-            .file-name { color:#c9d1d9; font-size:0.88em; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-            .badge { display:inline-block; padding:1px 6px; border-radius:3px; font-size:0.75em; font-weight:500; border:1px solid #30363d; background:#21262d; color:#8b949e; }
-            .badge-rust { background:rgba(222,165,132,0.15); color:#dea584; border-color:rgba(222,165,132,0.3); }
-            .badge-python { background:rgba(53,142,200,0.15); color:#4ec9b0; border-color:rgba(53,142,200,0.3); }
-            .badge-javascript, .badge-js { background:rgba(241,224,90,0.12); color:#f1e05a; border-color:rgba(241,224,90,0.25); }
-            .badge-typescript, .badge-ts { background:rgba(43,116,137,0.15); color:#3178c6; border-color:rgba(49,120,198,0.3); }
-            .badge-go { background:rgba(0,173,216,0.12); color:#00aed8; border-color:rgba(0,173,216,0.25); }
-            .badge-other { background:#21262d; color:#8b949e; border-color:#30363d; }
-            .region-table { width:100%; border-collapse:collapse; font-size:0.875em; }
-            .region-table th { text-align:left; padding:8px 10px; color:#8b949e; border-bottom:1px solid #30363d; font-weight:500; }
-            .region-table td { padding:7px 10px; border-bottom:1px solid #21262d; vertical-align:top; }
-            .region-table tr:last-child td { border-bottom:none; }
-            .region-table tr:hover td { background:rgba(255,255,255,0.03); }
-            .kind-badge { display:inline-block; padding:1px 7px; border-radius:3px; font-size:0.78em; background:#21262d; color:#8b949e; border:1px solid #30363d; }
-            .kind-function { background:rgba(88,166,255,0.12); color:#58a6ff; border-color:rgba(88,166,255,0.25); }
-            .kind-struct, .kind-class { background:rgba(63,185,80,0.1); color:#3fb950; border-color:rgba(63,185,80,0.2); }
-            .kind-impl_block { background:rgba(188,140,255,0.1); color:#bc8cff; border-color:rgba(188,140,255,0.2); }
-            .kind-trait, .kind-interface { background:rgba(255,166,77,0.1); color:#ffa64d; border-color:rgba(255,166,77,0.2); }
-            .source-container { margin-top:16px; border-radius:6px; overflow:hidden; border:1px solid #30363d; }
-            .source-header { display:flex; justify-content:space-between; align-items:center; padding:8px 14px; background:#161b22; border-bottom:1px solid #30363d; }
-            .line-numbers { counter-reset:line; }
-            .line-numbers .ln { display:flex; }
-            .line-numbers .ln::before { counter-increment:line; content:counter(line); display:inline-block; min-width:40px; padding-right:12px; color:#484f58; text-align:right; user-select:none; font-size:0.82em; flex-shrink:0; }
-        </style>
     "#;
 
     Html(templates::base_with_scripts("Files", "files", &content, scripts))
@@ -227,13 +194,13 @@ pub async fn detail(
 ) -> Html<String> {
     let storage = match SqliteStorage::open(&state.db_path) {
         Ok(s) => s,
-        Err(_) => return Html(r#"<div style="color:#f85149;padding:20px;">Failed to open database.</div>"#.to_string()),
+        Err(_) => return Html(r#"<div class="text-danger" style="padding:20px;">Failed to open database.</div>"#.to_string()),
     };
 
     let file = match storage.get_file(file_id) {
         Ok(Some(f)) => f,
-        Ok(None) => return Html(r#"<div style="color:#f85149;padding:20px;">File not found.</div>"#.to_string()),
-        Err(_) => return Html(r#"<div style="color:#f85149;padding:20px;">Error loading file.</div>"#.to_string()),
+        Ok(None) => return Html(r#"<div class="text-danger" style="padding:20px;">File not found.</div>"#.to_string()),
+        Err(_) => return Html(r#"<div class="text-danger" style="padding:20px;">Error loading file.</div>"#.to_string()),
     };
 
     let regions = storage.get_regions_for_file(file_id).unwrap_or_default();
@@ -248,7 +215,7 @@ pub async fn detail(
     // Build regions table
     let mut regions_html = String::new();
     if regions.is_empty() {
-        regions_html.push_str(r#"<p style="color:#8b949e;font-size:0.9em;">No regions indexed for this file.</p>"#);
+        regions_html.push_str(r#"<p class="text-muted" style="font-size:0.9em;">No regions indexed for this file.</p>"#);
     } else {
         regions_html.push_str(r#"<table class="region-table"><thead><tr><th>Kind</th><th>Name</th><th>Lines</th><th>Signature</th></tr></thead><tbody>"#);
         for r in &regions {
@@ -260,9 +227,9 @@ pub async fn detail(
             regions_html.push_str(&format!(
                 "<tr>\
                     <td><span class=\"kind-badge {kind_class}\">{kind_escaped}</span></td>\
-                    <td style=\"color:#e6edf3;font-weight:500;\">{name_escaped}</td>\
-                    <td style=\"color:#8b949e;font-family:monospace;white-space:nowrap;\">{}-{}</td>\
-                    <td style=\"color:#8b949e;font-family:monospace;font-size:0.82em;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\">{sig_escaped}</td>\
+                    <td style=\"font-weight:500;\">{name_escaped}</td>\
+                    <td class=\"text-muted font-mono\" style=\"white-space:nowrap;\">{}-{}</td>\
+                    <td class=\"text-muted font-mono\" style=\"font-size:0.82em;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\">{sig_escaped}</td>\
                 </tr>",
                 r.start_line, r.end_line
             ));
@@ -284,11 +251,11 @@ pub async fn detail(
             format!(
                 r#"<div class="source-container">
                     <div class="source-header">
-                        <span style="color:#8b949e;font-size:0.85em;">Source</span>
-                        <span style="color:#484f58;font-size:0.8em;">{} lines</span>
+                        <span class="text-muted" style="font-size:0.85em;">Source</span>
+                        <span class="text-muted" style="font-size:0.8em;">{} lines</span>
                     </div>
-                    <div style="overflow:auto;max-height:500px;">
-                        <pre style="margin:0;padding:12px 0;font-size:0.82em;line-height:1.6;background:#0d1117;"><code class="language-{hljs_lang} line-numbers">{lines_html}</code></pre>
+                    <div class="source-scroll">
+                        <pre><code class="language-{hljs_lang} line-numbers">{lines_html}</code></pre>
                     </div>
                 </div>
                 <script>
@@ -302,26 +269,26 @@ pub async fn detail(
         }
         Err(_) => {
             format!(
-                r#"<div style="margin-top:16px;padding:12px 16px;background:#161b22;border:1px solid #30363d;border-radius:6px;color:#8b949e;font-size:0.88em;">
-                    Source file not available on disk: <code style="color:#f85149;">{path_escaped}</code>
+                r#"<div class="source-unavailable">
+                    Source file not available on disk: <code class="text-danger">{path_escaped}</code>
                 </div>"#
             )
         }
     };
 
     let html = format!(r#"
-        <div style="margin-bottom:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div class="flex justify-between items-center mb-2" style="gap:12px;align-items:flex-start;">
             <div>
-                <h3 style="margin:0 0 4px;color:#e6edf3;font-size:1.05em;">{filename_escaped}</h3>
-                <div style="color:#8b949e;font-size:0.82em;font-family:monospace;">{path_escaped}</div>
+                <h3 style="margin:0 0 4px;font-size:1.05em;">{filename_escaped}</h3>
+                <div class="text-muted font-mono" style="font-size:0.82em;">{path_escaped}</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <div class="flex items-center gap-1" style="flex-shrink:0;">
                 <span class="badge {lang_class}">{lang_escaped}</span>
-                <span style="color:#484f58;font-size:0.8em;">indexed {date_str}</span>
+                <span class="text-muted" style="font-size:0.8em;">indexed {date_str}</span>
             </div>
         </div>
-        <div style="margin-bottom:16px;">
-            <div style="font-size:0.85em;font-weight:600;color:#8b949e;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Regions ({count})</div>
+        <div class="mb-2">
+            <div class="section-label mb-1">Regions ({count})</div>
             {regions_html}
         </div>
         {source_html}

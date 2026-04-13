@@ -798,6 +798,40 @@ button:disabled {
     padding: 20px;
 }
 
+.side-panel h3 {
+    color: var(--text-primary);
+    font-size: 1em;
+    margin: 0 0 8px;
+}
+
+.side-panel h4 {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 12px 0 6px;
+}
+
+.side-panel pre {
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px;
+    overflow-x: auto;
+    color: var(--text-primary);
+}
+
+.side-panel ul {
+    padding-left: 16px;
+    margin: 4px 0;
+}
+
+.side-panel li {
+    font-size: 0.85em;
+    margin-bottom: 4px;
+    color: var(--text-secondary);
+}
+
 /* ── Toolbar ─────────────────────────────────────────────────────────────── */
 
 .toolbar {
@@ -906,6 +940,261 @@ button:disabled {
 .justify-between { justify-content: space-between; }
 .gap-1           { gap: 8px; }
 .gap-2           { gap: 16px; }
+
+/* ── Search Hint ─────────────────────────────────────────────────────────── */
+
+.search-hint {
+    margin-top: 6px;
+    font-size: 0.82em;
+    color: var(--text-muted);
+}
+
+/* ── File Tree (Files page) ──────────────────────────────────────────────── */
+
+.file-tree ul {
+    list-style: none;
+    padding: 0 0 0 12px;
+    margin: 0;
+}
+
+.dir-entry {
+    margin-bottom: 2px;
+}
+
+.dir-name {
+    color: var(--accent);
+    font-size: 0.82em;
+    font-weight: 600;
+    padding: 4px 12px;
+    display: block;
+    letter-spacing: 0.2px;
+}
+
+.file-entry {
+    padding: 4px 12px 4px 16px;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.file-entry:hover {
+    background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+.file-entry.active {
+    background: var(--accent-bg);
+}
+
+.file-name {
+    color: var(--text-secondary);
+    font-size: 0.88em;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Language badges for file tree */
+.badge-rust {
+    background: color-mix(in srgb, #dea584 15%, transparent);
+    color: #dea584;
+    border-color: color-mix(in srgb, #dea584 30%, transparent);
+}
+
+.badge-python {
+    background: color-mix(in srgb, #4ec9b0 15%, transparent);
+    color: #4ec9b0;
+    border-color: color-mix(in srgb, #4ec9b0 30%, transparent);
+}
+
+.badge-javascript,
+.badge-js {
+    background: color-mix(in srgb, #f1e05a 12%, transparent);
+    color: #f1e05a;
+    border-color: color-mix(in srgb, #f1e05a 25%, transparent);
+}
+
+.badge-typescript,
+.badge-ts {
+    background: color-mix(in srgb, #3178c6 15%, transparent);
+    color: #3178c6;
+    border-color: color-mix(in srgb, #3178c6 30%, transparent);
+}
+
+.badge-go {
+    background: color-mix(in srgb, #00aed8 12%, transparent);
+    color: #00aed8;
+    border-color: color-mix(in srgb, #00aed8 25%, transparent);
+}
+
+.badge-other {
+    background: var(--border-subtle);
+    color: var(--text-muted);
+    border-color: var(--border);
+}
+
+/* ── Region Table (Files detail) ─────────────────────────────────────────── */
+
+.region-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875em;
+}
+
+.region-table th {
+    text-align: left;
+    padding: 8px 10px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+}
+
+.region-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: top;
+}
+
+.region-table tr:last-child td {
+    border-bottom: none;
+}
+
+.region-table tr:hover td {
+    background: color-mix(in srgb, var(--text-primary) 3%, transparent);
+}
+
+.kind-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: var(--radius-sm);
+    font-size: 0.78em;
+    background: var(--border-subtle);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+}
+
+.kind-function {
+    background: var(--accent-bg);
+    color: var(--accent);
+    border-color: var(--accent-border);
+}
+
+.kind-struct,
+.kind-class {
+    background: var(--success-bg);
+    color: var(--success);
+    border-color: color-mix(in srgb, var(--success) 25%, transparent);
+}
+
+.kind-impl_block {
+    background: var(--purple-bg);
+    color: var(--purple);
+    border-color: color-mix(in srgb, var(--purple) 25%, transparent);
+}
+
+.kind-trait,
+.kind-interface {
+    background: var(--warning-bg);
+    color: var(--warning);
+    border-color: color-mix(in srgb, var(--warning) 25%, transparent);
+}
+
+/* ── Source Viewer (Files detail) ────────────────────────────────────────── */
+
+.source-container {
+    margin-top: 16px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.source-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.source-scroll {
+    overflow: auto;
+    max-height: 500px;
+}
+
+.source-scroll pre {
+    margin: 0;
+    padding: 12px 0;
+    font-size: 0.82em;
+    line-height: 1.6;
+    background: var(--bg-body);
+    border: none;
+    border-radius: 0;
+}
+
+.line-numbers {
+    counter-reset: line;
+}
+
+.line-numbers .ln {
+    display: flex;
+}
+
+.line-numbers .ln::before {
+    counter-increment: line;
+    content: counter(line);
+    display: inline-block;
+    min-width: 40px;
+    padding-right: 12px;
+    color: var(--text-muted);
+    text-align: right;
+    user-select: none;
+    font-size: 0.82em;
+    flex-shrink: 0;
+    opacity: 0.5;
+}
+
+/* ── Source unavailable notice ───────────────────────────────────────────── */
+
+.source-unavailable {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    font-size: 0.88em;
+}
+
+/* ── Graph Page ──────────────────────────────────────────────────────────── */
+
+.graph-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.graph-toolbar label {
+    color: var(--text-muted);
+    font-size: 0.85em;
+}
+
+.graph-wrap {
+    position: relative;
+    display: flex;
+    height: calc(100vh - 100px);
+}
+
+#cy {
+    flex: 1;
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
 
 /* ── Empty State ─────────────────────────────────────────────────────────── */
 

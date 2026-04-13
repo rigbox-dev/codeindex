@@ -1,3 +1,49 @@
+function getCSSVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function buildCytoscapeStyle() {
+    return [
+        { selector: 'node', style: {
+            'label': 'data(label)',
+            'font-size': '10px',
+            'color': getCSSVar('--text-primary'),
+            'text-valign': 'center',
+            'text-halign': 'center',
+            'background-color': getCSSVar('--accent'),
+            'shape': 'roundrectangle',
+            'width': 'label',
+            'height': 'label',
+            'padding': '6px',
+        }},
+        { selector: 'node[kind="function"]', style: { 'background-color': getCSSVar('--accent') }},
+        { selector: 'node[kind="struct"]',   style: { 'background-color': getCSSVar('--success') }},
+        { selector: 'node[kind="class"]',    style: { 'background-color': getCSSVar('--purple') }},
+        { selector: 'node[kind="method"]',   style: { 'background-color': getCSSVar('--warning') }},
+        { selector: 'node[kind="interface"]',style: { 'background-color': getCSSVar('--danger') }},
+        { selector: ':parent', style: {
+            'background-color': getCSSVar('--bg-surface'),
+            'border-color': getCSSVar('--border'),
+            'border-width': 1,
+            'label': 'data(label)',
+            'font-size': '8px',
+            'text-valign': 'top',
+            'color': getCSSVar('--text-muted'),
+        }},
+        { selector: 'edge', style: {
+            'width': 1,
+            'line-color': getCSSVar('--border'),
+            'target-arrow-color': getCSSVar('--border'),
+            'target-arrow-shape': 'triangle',
+            'curve-style': 'bezier',
+            'arrow-scale': 0.8,
+        }},
+        { selector: 'edge[kind="calls"]',          style: { 'line-color': getCSSVar('--accent'),    'target-arrow-color': getCSSVar('--accent') }},
+        { selector: 'edge[kind="imports"]',         style: { 'line-color': getCSSVar('--text-muted'), 'target-arrow-color': getCSSVar('--text-muted') }},
+        { selector: 'edge[kind="type_reference"]',  style: { 'line-color': getCSSVar('--purple'),    'target-arrow-color': getCSSVar('--purple') }},
+    ];
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const res = await fetch('/api/graph?limit=200');
     const data = await res.json();
@@ -9,45 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cy = cytoscape({
         container: document.getElementById('cy'),
         elements: elements,
-        style: [
-            { selector: 'node', style: {
-                'label': 'data(label)',
-                'font-size': '10px',
-                'color': '#e6edf3',
-                'text-valign': 'center',
-                'text-halign': 'center',
-                'background-color': '#58a6ff',
-                'shape': 'roundrectangle',
-                'width': 'label',
-                'height': 'label',
-                'padding': '6px',
-            }},
-            { selector: 'node[kind="function"]', style: { 'background-color': '#58a6ff' }},
-            { selector: 'node[kind="struct"]', style: { 'background-color': '#3fb950' }},
-            { selector: 'node[kind="class"]', style: { 'background-color': '#bc8cff' }},
-            { selector: 'node[kind="method"]', style: { 'background-color': '#d29922' }},
-            { selector: 'node[kind="interface"]', style: { 'background-color': '#f85149' }},
-            { selector: ':parent', style: {
-                'background-color': '#161b22',
-                'border-color': '#30363d',
-                'border-width': 1,
-                'label': 'data(label)',
-                'font-size': '8px',
-                'text-valign': 'top',
-                'color': '#8b949e',
-            }},
-            { selector: 'edge', style: {
-                'width': 1,
-                'line-color': '#30363d',
-                'target-arrow-color': '#30363d',
-                'target-arrow-shape': 'triangle',
-                'curve-style': 'bezier',
-                'arrow-scale': 0.8,
-            }},
-            { selector: 'edge[kind="calls"]', style: { 'line-color': '#58a6ff', 'target-arrow-color': '#58a6ff' }},
-            { selector: 'edge[kind="imports"]', style: { 'line-color': '#8b949e', 'target-arrow-color': '#8b949e' }},
-            { selector: 'edge[kind="type_reference"]', style: { 'line-color': '#bc8cff', 'target-arrow-color': '#bc8cff' }},
-        ],
+        style: buildCytoscapeStyle(),
         layout: { name: 'cose', animate: false, nodeOverlap: 20, idealEdgeLength: 100 },
     });
 
@@ -68,22 +76,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.getElementById('fit-btn')?.addEventListener('click', () => cy.fit());
+
+    // Watch for theme changes and refresh Cytoscape styles
+    const observer = new MutationObserver(() => {
+        cy.style(buildCytoscapeStyle());
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 });
 
 function showNodeDetail(detail) {
     const panel = document.getElementById('node-detail');
     panel.classList.add('open');
     panel.innerHTML = `
-        <div style="padding:20px">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-                <h3 style="margin:0">${detail.name}</h3>
-                <button onclick="this.closest('.side-panel').classList.remove('open')" style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:1.2em">&times;</button>
-            </div>
+        <div class="side-panel-header">
+            <h3 style="margin:0">${detail.name}</h3>
+            <button onclick="this.closest('.side-panel').classList.remove('open')">&times;</button>
+        </div>
+        <div class="side-panel-body">
             <span class="badge badge-${detail.kind}">${detail.kind}</span>
-            <p style="color:#8b949e;margin:8px 0">${detail.file}:${detail.lines[0]}-${detail.lines[1]}</p>
+            <p class="text-muted" style="margin:8px 0">${detail.file}:${detail.lines[0]}-${detail.lines[1]}</p>
             <pre style="font-size:0.85em"><code>${detail.signature}</code></pre>
-            ${detail.outgoing.length > 0 ? '<h4>Calls</h4><ul>' + detail.outgoing.map(d => `<li>${d.name} <span style="color:#8b949e">${d.file}</span></li>`).join('') + '</ul>' : ''}
-            ${detail.incoming.length > 0 ? '<h4>Called By</h4><ul>' + detail.incoming.map(d => `<li>${d.name} <span style="color:#8b949e">${d.file}</span></li>`).join('') + '</ul>' : ''}
+            ${detail.outgoing.length > 0 ? '<h4>Calls</h4><ul>' + detail.outgoing.map(d => `<li>${d.name} <span class="text-muted">${d.file}</span></li>`).join('') + '</ul>' : ''}
+            ${detail.incoming.length > 0 ? '<h4>Called By</h4><ul>' + detail.incoming.map(d => `<li>${d.name} <span class="text-muted">${d.file}</span></li>`).join('') + '</ul>' : ''}
         </div>
     `;
 }
