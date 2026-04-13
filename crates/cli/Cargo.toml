@@ -12,9 +12,12 @@ path = "src/main.rs"
 codeindex-core = { path = "../core" }
 codeindex-daemon = { path = "../daemon" }
 codeindex-tree-sitter-langs = { path = "../tree-sitter-langs" }
+codeindex-web = { path = "../web" }
 anyhow = { workspace = true }
 serde_json = { workspace = true }
 clap = { version = "4", features = ["derive"] }
 colored = "2"
 atty = "0.2"
 libc = "0.2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+webbrowser = "1"

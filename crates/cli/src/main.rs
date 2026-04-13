@@ -80,6 +80,16 @@ enum Commands {
         #[arg(long)]
         stop: bool,
     },
+
+    /// Launch the web dashboard
+    Ui {
+        /// Port to serve on
+        #[arg(long, default_value = "3742")]
+        port: u16,
+        /// Don't auto-open browser
+        #[arg(long)]
+        no_open: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -117,6 +127,7 @@ fn main() {
         Commands::Gc => commands::gc::run(),
         Commands::Stats => commands::stats::run(),
         Commands::Watch { stop } => commands::watch::run(stop),
+        Commands::Ui { port, no_open } => commands::ui::run(port, no_open),
     };
 
     match result {
