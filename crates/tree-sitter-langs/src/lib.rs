@@ -1,9 +1,15 @@
+pub mod go_lang;
+pub mod python;
 pub mod rust_lang;
+pub mod typescript;
 
 use anyhow::Result;
 use tree_sitter::{Language, Tree};
 
+pub use go_lang::GoPlugin;
+pub use python::PythonPlugin;
 pub use rust_lang::RustPlugin;
+pub use typescript::TypeScriptPlugin;
 
 /// Region kinds recognized by language plugins.
 /// Mirrors `codeindex_core::model::RegionKind` exactly so that `From` impls
@@ -109,6 +115,9 @@ impl LanguageRegistry {
             plugins: Vec::new(),
         };
         registry.register(Box::new(RustPlugin));
+        registry.register(Box::new(TypeScriptPlugin));
+        registry.register(Box::new(PythonPlugin));
+        registry.register(Box::new(GoPlugin));
         registry
     }
 
