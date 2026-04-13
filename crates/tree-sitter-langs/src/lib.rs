@@ -1,3 +1,5 @@
+pub mod c_lang;
+pub mod cpp_lang;
 pub mod go_lang;
 pub mod python;
 pub mod rust_lang;
@@ -6,6 +8,8 @@ pub mod typescript;
 use anyhow::Result;
 use tree_sitter::{Language, Tree};
 
+pub use c_lang::CPlugin;
+pub use cpp_lang::CppPlugin;
 pub use go_lang::GoPlugin;
 pub use python::PythonPlugin;
 pub use rust_lang::RustPlugin;
@@ -118,6 +122,8 @@ impl LanguageRegistry {
         registry.register(Box::new(TypeScriptPlugin));
         registry.register(Box::new(PythonPlugin));
         registry.register(Box::new(GoPlugin));
+        registry.register(Box::new(CPlugin));
+        registry.register(Box::new(CppPlugin));
         registry
     }
 
