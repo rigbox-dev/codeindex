@@ -1,4 +1,8 @@
 pub fn base(title: &str, active_page: &str, content: &str) -> String {
+    base_with_scripts(title, active_page, content, "")
+}
+
+pub fn base_with_scripts(title: &str, active_page: &str, content: &str, extra_scripts: &str) -> String {
     format!(r#"<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,10 +29,12 @@ pub fn base(title: &str, active_page: &str, content: &str) -> String {
     <main class="content">
         {content}
     </main>
+    {extra_scripts}
 </body>
 </html>"#,
         title = title,
         content = content,
+        extra_scripts = extra_scripts,
         dashboard_active = if active_page == "dashboard" { "active" } else { "" },
         search_active = if active_page == "search" { "active" } else { "" },
         files_active = if active_page == "files" { "active" } else { "" },

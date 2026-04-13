@@ -22,6 +22,7 @@ async fn static_handler(uri: Uri) -> impl IntoResponse {
 pub fn build_router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(routes::dashboard::index))
+        .route("/api/stats", get(routes::api::stats))
         .route("/assets/{*path}", get(static_handler))
         .with_state(state)
 }
