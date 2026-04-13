@@ -2,6 +2,7 @@
 name = "codeindex-mcp-server"
 version.workspace = true
 edition.workspace = true
+publish = false
 
 [dependencies]
 codeindex-core = { path = "../core" }

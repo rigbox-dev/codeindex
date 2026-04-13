@@ -12,6 +12,12 @@ members = [
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+authors = ["Jonathan James"]
+repository = "https://github.com/rigbox-dev/codeindex"
+homepage = "https://github.com/rigbox-dev/codeindex"
+keywords = ["code-search", "indexing", "tree-sitter", "mcp", "ai-tools"]
+categories = ["development-tools", "command-line-utilities"]
+description = "Semantic code indexing and retrieval for AI agents"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }

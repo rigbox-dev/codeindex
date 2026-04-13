@@ -2,6 +2,7 @@
 name = "codeindex-tree-sitter-langs"
 version.workspace = true
 edition.workspace = true
+publish = false
 
 [dependencies]
 anyhow = { workspace = true }

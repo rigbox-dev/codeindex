@@ -2,6 +2,7 @@
 name = "codeindex"
 version.workspace = true
 edition.workspace = true
+description.workspace = true
 
 [[bin]]
 name = "codeindex"
