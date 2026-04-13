@@ -5,4 +5,9 @@ edition.workspace = true
 
 [dependencies]
 codeindex-core = { path = "../core" }
+codeindex-tree-sitter-langs = { path = "../tree-sitter-langs" }
 anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = "0.3"
+notify = "6"
+ignore = "0.4"

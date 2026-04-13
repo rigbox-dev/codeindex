@@ -132,6 +132,14 @@ impl LanguageRegistry {
             .find(|p| p.language_id() == lang)
             .map(|p| p.as_ref())
     }
+
+    /// Return all file extensions (e.g. `[".rs"]`) handled by registered plugins.
+    pub fn all_extensions(&self) -> Vec<String> {
+        self.plugins
+            .iter()
+            .flat_map(|p| p.file_extensions().iter().map(|e| e.to_string()))
+            .collect()
+    }
 }
 
 impl Default for LanguageRegistry {
