@@ -26,12 +26,13 @@ impl LanguagePlugin for RustPlugin {
 
     fn extract_dependencies(
         &self,
-        _tree: &Tree,
-        _source: &[u8],
-        _regions: &[ExtractedRegion],
+        tree: &Tree,
+        source: &[u8],
+        regions: &[ExtractedRegion],
     ) -> Vec<ExtractedDependency> {
-        // Task 5 will add dependency extraction.
-        Vec::new()
+        let mut deps = Vec::new();
+        collect_dependencies(tree.root_node(), source, regions, &mut deps);
+        deps
     }
 }
 
@@ -204,6 +205,158 @@ fn make_region(
 }
 
 // ---------------------------------------------------------------------------
+// Dependency extraction helpers
+// ---------------------------------------------------------------------------
+
+/// Recursively walk the AST collecting dependency information.
+fn collect_dependencies(
+    node: Node,
+    source: &[u8],
+    regions: &[ExtractedRegion],
+    deps: &mut Vec<ExtractedDependency>,
+) {
+    match node.kind() {
+        "use_declaration" => {
+            extract_use_dependency(node, source, regions, deps);
+            // Don't recurse further — the use path is handled above.
+            return;
+        }
+        "call_expression" => {
+            extract_call_dependency(node, source, regions, deps);
+            // Still recurse into children to catch nested calls.
+        }
+        "impl_item" => {
+            extract_impl_trait_dependency(node, source, regions, deps);
+            // Still recurse to catch calls inside method bodies.
+        }
+        _ => {}
+    }
+
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        collect_dependencies(child, source, regions, deps);
+    }
+}
+
+/// Extract a `use` import dependency from a `use_declaration` node.
+fn extract_use_dependency(
+    node: Node,
+    source: &[u8],
+    regions: &[ExtractedRegion],
+    deps: &mut Vec<ExtractedDependency>,
+) {
+    // The use_declaration's argument is typically a `scoped_identifier`,
+    // `use_wildcard`, `use_list`, or `identifier`.
+    let full_path = node_text(node, source)
+        .trim_start_matches("use ")
+        .trim_end_matches(';')
+        .trim()
+        .to_string();
+
+    // Extract the last segment as the target symbol.
+    let target_symbol = full_path
+        .split("::")
+        .last()
+        .unwrap_or(&full_path)
+        .trim_matches('{')
+        .trim_matches('}')
+        .trim()
+        .to_string();
+
+    // Skip empty or wildcard-only symbols.
+    if target_symbol.is_empty() || target_symbol == "*" {
+        return;
+    }
+
+    let source_region_index = crate::find_enclosing_region(node, regions)
+        .unwrap_or(0);
+
+    deps.push(ExtractedDependency {
+        source_region_index,
+        target_symbol,
+        target_path: Some(full_path),
+        kind: codeindex_core::model::DependencyKind::Imports,
+    });
+}
+
+/// Extract a function call dependency from a `call_expression` node.
+fn extract_call_dependency(
+    node: Node,
+    source: &[u8],
+    regions: &[ExtractedRegion],
+    deps: &mut Vec<ExtractedDependency>,
+) {
+    let function_node = match node.child_by_field_name("function") {
+        Some(n) => n,
+        None => return,
+    };
+
+    let target_symbol = match function_node.kind() {
+        "identifier" => node_text(function_node, source).to_string(),
+        "field_expression" => {
+            // e.g. `obj.method(...)` — the field is the method name
+            function_node
+                .child_by_field_name("field")
+                .map(|n| node_text(n, source).to_string())
+                .unwrap_or_default()
+        }
+        "scoped_identifier" => {
+            // e.g. `Foo::bar(...)` — the `name` field is the last segment
+            function_node
+                .child_by_field_name("name")
+                .map(|n| node_text(n, source).to_string())
+                .unwrap_or_default()
+        }
+        _ => return,
+    };
+
+    if target_symbol.is_empty() {
+        return;
+    }
+
+    let source_region_index = crate::find_enclosing_region(node, regions)
+        .unwrap_or(0);
+
+    deps.push(ExtractedDependency {
+        source_region_index,
+        target_symbol,
+        target_path: None,
+        kind: codeindex_core::model::DependencyKind::Calls,
+    });
+}
+
+/// Extract a trait implementation dependency from an `impl_item` node that has
+/// a `trait` field (i.e. `impl Trait for Type { ... }`).
+fn extract_impl_trait_dependency(
+    node: Node,
+    source: &[u8],
+    regions: &[ExtractedRegion],
+    deps: &mut Vec<ExtractedDependency>,
+) {
+    // The tree-sitter Rust grammar exposes the trait being implemented via the
+    // `trait` field on `impl_item`.
+    let trait_node = match node.child_by_field_name("trait") {
+        Some(n) => n,
+        None => return, // plain `impl Type { ... }`, no trait
+    };
+
+    let target_symbol = node_text(trait_node, source).to_string();
+    if target_symbol.is_empty() {
+        return;
+    }
+
+    let source_region_index = crate::find_enclosing_region(node, regions)
+        .unwrap_or(0);
+
+    deps.push(ExtractedDependency {
+        source_region_index,
+        target_symbol,
+        target_path: None,
+        kind: codeindex_core::model::DependencyKind::Implements,
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -211,7 +364,7 @@ fn make_region(
 mod tests {
     use super::*;
     use crate::parse_source;
-    use codeindex_core::model::RegionKind;
+    use codeindex_core::model::{DependencyKind, RegionKind};
 
     fn parse(src: &str) -> (Tree, Vec<u8>) {
         let bytes = src.as_bytes().to_vec();
@@ -336,5 +489,116 @@ impl Foo {
 
         assert_eq!(enums.len(), 1, "expected 1 enum");
         assert_eq!(enums[0].name, "Color");
+    }
+
+    #[test]
+    fn extracts_use_imports() {
+        let src = r#"use std::collections::HashMap;
+use crate::auth::types::AuthRequest;
+
+fn main() {}
+"#;
+        let (tree, bytes) = parse(src);
+        let regions = RustPlugin.extract_regions(&tree, &bytes);
+        let deps = RustPlugin.extract_dependencies(&tree, &bytes, &regions);
+
+        let imports: Vec<_> = deps
+            .iter()
+            .filter(|d| d.kind == DependencyKind::Imports)
+            .collect();
+
+        assert!(
+            imports.len() >= 2,
+            "expected at least 2 import dependencies, got {}",
+            imports.len()
+        );
+
+        let symbols: Vec<&str> = imports.iter().map(|d| d.target_symbol.as_str()).collect();
+        assert!(
+            symbols.contains(&"HashMap"),
+            "expected HashMap in imports, got {:?}",
+            symbols
+        );
+        assert!(
+            symbols.contains(&"AuthRequest"),
+            "expected AuthRequest in imports, got {:?}",
+            symbols
+        );
+
+        // Verify target_path is set.
+        let hashmap_dep = imports
+            .iter()
+            .find(|d| d.target_symbol == "HashMap")
+            .unwrap();
+        assert_eq!(
+            hashmap_dep.target_path.as_deref(),
+            Some("std::collections::HashMap")
+        );
+    }
+
+    #[test]
+    fn extracts_function_calls() {
+        let src = r#"fn callee(x: i32) {}
+fn helper() {}
+
+fn caller() {
+    callee(42);
+    helper();
+}
+"#;
+        let (tree, bytes) = parse(src);
+        let regions = RustPlugin.extract_regions(&tree, &bytes);
+        let deps = RustPlugin.extract_dependencies(&tree, &bytes, &regions);
+
+        let calls: Vec<_> = deps
+            .iter()
+            .filter(|d| d.kind == DependencyKind::Calls)
+            .collect();
+
+        let symbols: Vec<&str> = calls.iter().map(|d| d.target_symbol.as_str()).collect();
+        assert!(
+            symbols.contains(&"callee"),
+            "expected 'callee' in calls, got {:?}",
+            symbols
+        );
+        assert!(
+            symbols.contains(&"helper"),
+            "expected 'helper' in calls, got {:?}",
+            symbols
+        );
+    }
+
+    #[test]
+    fn extracts_impl_trait() {
+        let src = r#"pub trait Greeter {
+    fn greet(&self) -> String;
+}
+
+pub struct Bot;
+
+impl Greeter for Bot {
+    fn greet(&self) -> String {
+        String::from("Hello!")
+    }
+}
+"#;
+        let (tree, bytes) = parse(src);
+        let regions = RustPlugin.extract_regions(&tree, &bytes);
+        let deps = RustPlugin.extract_dependencies(&tree, &bytes, &regions);
+
+        let impls: Vec<_> = deps
+            .iter()
+            .filter(|d| d.kind == DependencyKind::Implements)
+            .collect();
+
+        assert!(
+            !impls.is_empty(),
+            "expected at least one Implements dependency"
+        );
+        assert_eq!(
+            impls[0].target_symbol, "Greeter",
+            "expected target_symbol 'Greeter', got '{}'",
+            impls[0].target_symbol
+        );
     }
 }
