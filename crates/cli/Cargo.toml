@@ -9,4 +9,9 @@ path = "src/main.rs"
 
 [dependencies]
 codeindex-core = { path = "../core" }
+codeindex-tree-sitter-langs = { path = "../tree-sitter-langs" }
 anyhow = { workspace = true }
+serde_json = { workspace = true }
+clap = { version = "4", features = ["derive"] }
+colored = "2"
+atty = "0.2"
