@@ -238,6 +238,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "codeindex-core",
+ "codeindex-tree-sitter-langs",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

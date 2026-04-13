@@ -5,4 +5,7 @@ edition.workspace = true
 
 [dependencies]
 codeindex-core = { path = "../core" }
+codeindex-tree-sitter-langs = { path = "../tree-sitter-langs" }
 anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
