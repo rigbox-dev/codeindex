@@ -7,26 +7,26 @@ pub async fn index(State(_state): State<SharedState>) -> Html<String> {
     let content = r#"
         <div class="page-header">
             <h2>Dashboard</h2>
-            <span id="last-indexed" class="text-muted" style="font-size:0.85em;"></span>
+            <span id="last-indexed" class="text-muted text-sm"></span>
         </div>
 
         <!-- Stat Cards -->
         <div class="stat-cards">
             <div class="stat-card">
                 <div class="label">Files Indexed</div>
-                <div class="value" id="stat-files">—</div>
+                <div class="value kpi-value" id="stat-files">—</div>
             </div>
             <div class="stat-card">
                 <div class="label">Code Regions</div>
-                <div class="value" id="stat-regions">—</div>
+                <div class="value kpi-value" id="stat-regions">—</div>
             </div>
             <div class="stat-card">
                 <div class="label">Dependencies</div>
-                <div class="value" id="stat-deps">—</div>
+                <div class="value kpi-value" id="stat-deps">—</div>
             </div>
             <div class="stat-card">
                 <div class="label">Index Size</div>
-                <div class="value" id="stat-size">—</div>
+                <div class="value kpi-value" id="stat-size">—</div>
             </div>
         </div>
 

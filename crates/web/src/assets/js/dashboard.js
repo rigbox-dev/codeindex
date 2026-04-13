@@ -1,43 +1,45 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    let data;
-    try {
-        const res = await fetch('/api/stats');
-        data = await res.json();
-    } catch (e) {
-        console.error('Failed to fetch stats:', e);
-        return;
+function getCSSVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+let langChartInstance = null;
+let kindChartInstance = null;
+let lastStatsData = null;
+
+function buildCharts(data) {
+    // Destroy existing chart instances before rebuilding
+    if (langChartInstance) {
+        langChartInstance.destroy();
+        langChartInstance = null;
+    }
+    if (kindChartInstance) {
+        kindChartInstance.destroy();
+        kindChartInstance = null;
     }
 
-    // Update stat cards
-    const filesEl = document.getElementById('stat-files');
-    const regionsEl = document.getElementById('stat-regions');
-    const depsEl = document.getElementById('stat-deps');
-    const sizeEl = document.getElementById('stat-size');
-
-    if (filesEl) filesEl.textContent = data.total_files.toLocaleString();
-    if (regionsEl) regionsEl.textContent = data.total_regions.toLocaleString();
-    if (depsEl) depsEl.textContent = data.total_dependencies.toLocaleString();
-    if (sizeEl) {
-        const totalBytes = data.db_size_bytes + data.vector_size_bytes;
-        if (totalBytes >= 1024 * 1024) {
-            sizeEl.textContent = (totalBytes / (1024 * 1024)).toFixed(1) + ' MB';
-        } else {
-            sizeEl.textContent = (totalBytes / 1024).toFixed(1) + ' KB';
-        }
-    }
+    const accent      = getCSSVar('--accent');
+    const success     = getCSSVar('--success');
+    const purple      = getCSSVar('--purple');
+    const warning     = getCSSVar('--warning');
+    const danger      = getCSSVar('--danger');
+    const textMuted   = getCSSVar('--text-muted');
+    const textPrimary = getCSSVar('--text-primary');
+    const border      = getCSSVar('--border');
 
     // Language bar chart
     const langCanvas = document.getElementById('lang-chart');
     if (langCanvas && data.languages && data.languages.length > 0) {
+        // Restore canvas if it was replaced with a message
+        if (langCanvas.tagName !== 'CANVAS') return;
         const ctx = langCanvas.getContext('2d');
-        new Chart(ctx, {
+        langChartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: data.languages.map(l => l.label),
                 datasets: [{
                     label: 'Files',
                     data: data.languages.map(l => l.count),
-                    backgroundColor: '#58a6ff',
+                    backgroundColor: accent,
                     borderRadius: 4,
                 }]
             },
@@ -50,12 +52,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 },
                 scales: {
                     x: {
-                        grid: { color: '#30363d' },
-                        ticks: { color: '#8b949e' }
+                        grid: { color: border },
+                        ticks: { color: textMuted }
                     },
                     y: {
                         grid: { display: false },
-                        ticks: { color: '#e6edf3' }
+                        ticks: { color: textPrimary }
                     }
                 }
             }
@@ -67,9 +69,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Region kind doughnut chart
     const kindCanvas = document.getElementById('kind-chart');
     if (kindCanvas && data.region_kinds && data.region_kinds.length > 0) {
-        const colors = ['#58a6ff', '#3fb950', '#bc8cff', '#d29922', '#f85149', '#8b949e', '#79c0ff', '#56d364'];
+        const cssColorVars = ['--accent', '--success', '--purple', '--warning', '--danger', '--text-muted'];
+        const colors = cssColorVars.map(v => getCSSVar(v));
+        // Extend with fallback repeats if there are more slices than CSS vars
+        while (colors.length < data.region_kinds.length) {
+            colors.push(...cssColorVars.map(v => getCSSVar(v)));
+        }
+
         const ctx2 = kindCanvas.getContext('2d');
-        new Chart(ctx2, {
+        kindChartInstance = new Chart(ctx2, {
             type: 'doughnut',
             data: {
                 labels: data.region_kinds.map(r => r.label),
@@ -86,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     legend: {
                         position: 'right',
                         labels: {
-                            color: '#e6edf3',
+                            color: textPrimary,
                             padding: 12,
                             boxWidth: 12,
                         }
@@ -97,6 +105,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (kindCanvas) {
         kindCanvas.parentElement.innerHTML = '<p class="text-muted" style="text-align:center;padding:40px 0;">No regions indexed yet</p>';
     }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    let data;
+    try {
+        const res = await fetch('/api/stats');
+        data = await res.json();
+    } catch (e) {
+        console.error('Failed to fetch stats:', e);
+        return;
+    }
+
+    lastStatsData = data;
+
+    // Update stat cards
+    const filesEl   = document.getElementById('stat-files');
+    const regionsEl = document.getElementById('stat-regions');
+    const depsEl    = document.getElementById('stat-deps');
+    const sizeEl    = document.getElementById('stat-size');
+
+    if (filesEl)   filesEl.textContent   = data.total_files.toLocaleString();
+    if (regionsEl) regionsEl.textContent = data.total_regions.toLocaleString();
+    if (depsEl)    depsEl.textContent    = data.total_dependencies.toLocaleString();
+    if (sizeEl) {
+        const totalBytes = data.db_size_bytes + data.vector_size_bytes;
+        if (totalBytes >= 1024 * 1024) {
+            sizeEl.textContent = (totalBytes / (1024 * 1024)).toFixed(1) + ' MB';
+        } else {
+            sizeEl.textContent = (totalBytes / 1024).toFixed(1) + ' KB';
+        }
+    }
 
     // Last indexed timestamp
     const lastEl = document.getElementById('last-indexed');
@@ -105,6 +144,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (lastEl) {
         lastEl.textContent = 'Not yet indexed';
     }
+
+    buildCharts(data);
+
+    // Rebuild charts whenever the theme (data-theme attribute) changes
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                if (lastStatsData) buildCharts(lastStatsData);
+                break;
+            }
+        }
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 });
 
 function timeAgo(timestamp) {
