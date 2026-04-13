@@ -13,6 +13,7 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 codeindex-tree-sitter-langs = { path = "../tree-sitter-langs" }
 ignore = "0.4"
 instant-distance = "0.6"
+dirs = "5"
 
 [dev-dependencies]
 tempfile = "3"
