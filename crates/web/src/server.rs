@@ -26,6 +26,11 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/search", get(routes::search::page))
         .route("/search/results", get(routes::search::results))
         .route("/api/search", get(routes::api::search))
+        .route("/files", get(routes::files::page))
+        .route("/files/detail/:id", get(routes::files::detail))
+        .route("/api/files", get(routes::api::list_files))
+        .route("/api/files/:id", get(routes::api::get_file_detail))
+        .route("/api/files/:id/source", get(routes::api::get_file_source))
         .route("/assets/{*path}", get(static_handler))
         .with_state(state)
 }
